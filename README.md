@@ -7,11 +7,13 @@
 **English** · [Русский](README.ru.md)
 
 ![Python](https://img.shields.io/badge/python-3.12-black?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-616%20passing-black?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-675%20passing-black?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)
 ![Status](https://img.shields.io/badge/status-research%20prototype-black?style=flat-square)
 
-<img src="docs/console-screenshots/overview-dark.png" alt="ReverseAI console — project overview, dark theme" width="900">
+<img src="docs/demo.gif" alt="ReverseAI console — releasing a package through the barrier, parity and costs" width="900">
+
+<sub>The console on the bundled demo target: prepare a release, review the sanitized spec and scenarios, approve by hash, check parity and costs.</sub>
 
 </div>
 
@@ -196,6 +198,20 @@ Design decisions are logged in [`docs/spec/decisions.md`](docs/spec/decisions.md
 - Thresholds (95% parity, 100% critical scenarios, 5% code similarity) are working values, not validated ones.
 - Single-operator console: no accounts, jobs live in process memory.
 - Tested end to end only on the bundled demo target with a scripted LLM.
+
+## Status and help wanted
+
+This is a prototype, published so the ideas and the code can be reused. I am not developing it further — **fork it, take pieces of it, or pick up one of the open problems below**. Pull requests are welcome too; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+What would move it forward the most:
+
+1. **A live run.** Run `reverseai bench --target taskboard --live` with real models and publish parity, cost and the number of build rounds per model. Nobody has done it yet.
+2. **Isolation.** Wire `DockerSandbox` into `build`, `bench` and the console, with a prebuilt image (fastapi, uvicorn, httpx).
+3. **A real open-source target.** Point the pipeline at a small self-hosted app (a todo app, a pastebin, a URL shortener) and report what breaks.
+4. **Login flows.** Let the observer sign in to a sandbox target with a test account.
+5. **A second clone template.** TypeScript / Next.js next to `python-fastapi` (see D-006).
+6. **Cheaper models.** Compare model mixes per role by cost per solved scenario (OpenRouter, DeepSeek, local open-weights models).
+7. **Durable jobs.** Console jobs survive a restart; multi-user access.
 
 ## Responsible use
 
