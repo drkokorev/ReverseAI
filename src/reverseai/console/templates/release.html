@@ -1,24 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Согласование · {{ card.name }}{% endblock %}
+{% block title %}{{ t("release_page.page_title", name=card.name) }}{% endblock %}
 {% block page_class %}tight{% endblock %}
 {% block content %}
 <section class="hero">
   <div class="hero-text">
-    <div class="eyebrow">{{ card.product_name|upper }} · ЭТАП 06 · БАРЬЕР</div>
-    <h1 class="display display-sm">ПАКЕТ v{{ view.draft.spec.version if view.draft else 1 }}</h1>
-    <p class="lede">Всё, что увидят агенты-реализаторы: спецификация и сценарии после очистки. Подпись привязана к хешу пакета — после неё содержимое изменить нельзя.</p>
+    <div class="eyebrow">{{ card.product_name|upper }} · {{ t("release_page.eyebrow") }}</div>
+    <h1 class="display display-sm">{{ t("release_page.title", version=view.draft.spec.version if view.draft else 1) }}</h1>
+    <p class="lede">{{ t("release_page.lede") }}</p>
   </div>
 </section>
 
 {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
 {% if not view.draft %}
-<p class="empty">Черновик выпуска ещё не подготовлен. Запустите этап «Подготовка выпуска» на <a class="link" href="{{ project_url }}">странице проекта</a>.</p>
+<p class="empty">{{ t("release_page.no_draft_before") }} <a class="link" href="{{ project_url }}">{{ t("parity_page.none_link") }}</a>{{ t("release_page.no_draft_after") }}</p>
 {% else %}
 {% set draft = view.draft %}
 {% set spec = draft.spec %}
 <div class="split align-start">
-  <section class="split-main stack-lg" aria-label="Содержимое пакета">
+  <section class="split-main stack-lg" aria-label="{{ t('release_page.contents') }}">
     <div class="tabs" role="tablist" data-tabs>
       {% for key, label in tabs.items() %}
       <a class="tab" href="?tab={{ key }}" role="tab" aria-selected="{{ 'true' if key == tab else 'false' }}" aria-controls="tab-{{ key }}" data-tab="{{ key }}">{{ label }}{% if key == "scenarios" %} · {{ draft.scenarios|length }}{% endif %}</a>
@@ -30,7 +30,7 @@
         <p class="prose">{{ spec.summary or "—" }}</p>
 
         <div class="rows">
-          <div class="rows-title">ФУНКЦИИ · {{ spec.features|length }}</div>
+          <div class="rows-title">{{ t("release_page.features") }} · {{ spec.features|length }}</div>
           {% for item in spec.features %}
           <div class="item-row">
             <span class="item-id mono muted">{{ item.id }}</span>
@@ -44,7 +44,7 @@
         </div>
 
         <div class="rows">
-          <div class="rows-title">ПРАВИЛА · {{ spec.rules|length }}</div>
+          <div class="rows-title">{{ t("release_page.rules") }} · {{ spec.rules|length }}</div>
           {% for item in spec.rules %}
           <div class="item-row">
             <span class="item-id mono muted">{{ item.id }}</span>
@@ -58,7 +58,7 @@
         </div>
 
         <div class="rows">
-          <div class="rows-title">СУЩНОСТИ · {{ spec.entities|length }}</div>
+          <div class="rows-title">{{ t("release_page.entities") }} · {{ spec.entities|length }}</div>
           {% for entity in spec.entities %}
           <div class="item-row">
             <span class="item-id mono">{{ entity.name }}</span>
@@ -78,15 +78,15 @@
             <div class="item-main">
               <span class="item-title mono">{{ contract.path }}</span>
               {% if contract.description %}<span class="item-desc">{{ contract.description }}</span>{% endif %}
-              {% if contract.request_schema %}<span class="mono small muted">запрос: {{ compact(contract.request_schema) }}</span>{% endif %}
-              {% for status in contract.responses|sort %}<span class="mono small muted">ответ {{ status }}: {{ compact(contract.responses[status]) }}</span>{% endfor %}
+              {% if contract.request_schema %}<span class="mono small muted">{{ t("spec_md.request") }}: {{ compact(contract.request_schema) }}</span>{% endif %}
+              {% for status in contract.responses|sort %}<span class="mono small muted">{{ t("spec_md.response", status=status) }}: {{ compact(contract.responses[status]) }}</span>{% endfor %}
             </div>
           </div>
           {% else %}<p class="muted">—</p>{% endfor %}
         </div>
 
         <div class="rows">
-          <div class="rows-title">ПРОБЕЛЫ · {{ spec.gaps|length }}</div>
+          <div class="rows-title">{{ t("release_page.gaps") }} · {{ spec.gaps|length }}</div>
           {% for gap in spec.gaps %}
           <div class="item-row"><span class="item-desc">{{ gap }}</span></div>
           {% else %}<p class="muted">—</p>{% endfor %}
@@ -100,9 +100,9 @@
           <thead>
             <tr>
               <th scope="col">ID</th>
-              <th scope="col">СЦЕНАРИЙ</th>
-              <th scope="col">ЗАПРОСЫ И ОЖИДАНИЯ</th>
-              <th scope="col">ТИП</th>
+              <th scope="col">{{ t("parity_page.col.scenario") }}</th>
+              <th scope="col">{{ t("release_page.col.steps") }}</th>
+              <th scope="col">{{ t("release_page.col.type") }}</th>
             </tr>
           </thead>
           <tbody>
@@ -115,18 +115,18 @@
                   {% for item in scenario.steps %}
                   <li>
                     <span class="mono">{{ item.step.method }} {{ item.step.path }}</span>
-                    {% if item.step.json_body is not none %}<span class="mono muted small">тело {{ compact(item.step.json_body) }}</span>{% endif %}
-                    <span class="mono small">→ {{ item.expect.status }}{% if item.expect.json_shape %} · форма{% endif %}</span>
+                    {% if item.step.json_body is not none %}<span class="mono muted small">{{ t("release_md.body") }} {{ compact(item.step.json_body) }}</span>{% endif %}
+                    <span class="mono small">→ {{ item.expect.status }}{% if item.expect.json_shape %} · {{ t("release_md.shape") }}{% endif %}</span>
                     {% for pointer, value in item.expect.json_equals.items() %}<span class="mono small muted">{{ pointer }} = {{ compact(value) }}</span>{% endfor %}
-                    {% if item.step.save %}<span class="mono small muted">сохранить {{ compact(item.step.save) }}</span>{% endif %}
+                    {% if item.step.save %}<span class="mono small muted">{{ t("release_md.save") }} {{ compact(item.step.save) }}</span>{% endif %}
                   </li>
                   {% endfor %}
                 </ol>
               </td>
-              <td class="{{ 'strong' if scenario.critical else 'muted' }}">{{ "критичный" if scenario.critical else "обычный" }}</td>
+              <td class="{{ 'strong' if scenario.critical else 'muted' }}">{{ t("scenario.critical") if scenario.critical else t("scenario.regular") }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="muted">Сценариев нет.</td></tr>
+            <tr><td colspan="4" class="muted">{{ t("release_page.no_scenarios") }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -136,15 +136,15 @@
     <div class="tab-panel" id="tab-cleanup"{% if tab != "cleanup" %} hidden{% endif %} role="tabpanel">
       <div class="stack-lg">
         <div class="stats">
-          <div class="stat"><span class="kpi-label">НАХОДКИ</span><span class="stat-value" data-stat="findings">{{ view.findings|length }}</span></div>
-          <div class="stat"><span class="kpi-label">ПРЕДУПРЕЖДЕНИЯ</span><span class="stat-value" data-stat="warnings">{{ view.warnings|length }}</span></div>
-          <div class="stat"><span class="kpi-label">УДЕРЖАНО</span><span class="stat-value" data-stat="withheld">{{ view.withheld|length }}</span></div>
-          <div class="stat"><span class="kpi-label">ОТБРОШЕНО ОРАКУЛОМ</span><span class="stat-value" data-stat="dropped">{{ view.dropped|length if view.dropped is not none else "—" }}</span></div>
+          <div class="stat"><span class="kpi-label">{{ t("release_page.findings") }}</span><span class="stat-value" data-stat="findings">{{ view.findings|length }}</span></div>
+          <div class="stat"><span class="kpi-label">{{ t("release_page.warnings") }}</span><span class="stat-value" data-stat="warnings">{{ view.warnings|length }}</span></div>
+          <div class="stat"><span class="kpi-label">{{ t("release_page.withheld") }}</span><span class="stat-value" data-stat="withheld">{{ view.withheld|length }}</span></div>
+          <div class="stat"><span class="kpi-label">{{ t("release_page.dropped") }}</span><span class="stat-value" data-stat="dropped">{{ view.dropped|length if view.dropped is not none else "—" }}</span></div>
         </div>
-        <p class="note">Санитайзер сверяет каждый текст пакета со словарём оригинала: код, страницы, ответы сервера. Совпадения от 8 слов, бренд и домены вырезаются; длинные и прозаические ожидаемые значения не передаются.</p>
+        <p class="note">{{ t("release_page.sanitizer_note") }}</p>
 
         <div class="rows">
-          <div class="rows-title">НАХОДКИ САНИТАЙЗЕРА</div>
+          <div class="rows-title">{{ t("release_page.sanitizer_findings") }}</div>
           {% for finding in view.findings %}
           <div class="item-row">
             <span class="item-id">{{ finding_kinds.get(finding.kind, finding.kind) }}</span>
@@ -153,13 +153,13 @@
               {% if finding.excerpt %}<span class="item-desc">«{{ finding.excerpt }}»</span>{% endif %}
             </div>
           </div>
-          {% else %}<p class="muted">Санитайзер ничего не нашёл.</p>{% endfor %}
+          {% else %}<p class="muted">{{ t("release_page.no_findings") }}</p>{% endfor %}
         </div>
 
         {% if view.warnings %}
         <div class="rows">
-          <div class="rows-title warn">ПРЕДУПРЕЖДЕНИЯ · {{ view.warnings|length }}</div>
-          <p class="note">Строки тел запросов совпадают с кодом или текстом оригинала. Сценарий отправляет их как есть, выпуск они не блокируют: проверьте, что это данные, а не выражение оригинала.</p>
+          <div class="rows-title warn">{{ t("release_page.warnings") }} · {{ view.warnings|length }}</div>
+          <p class="note">{{ t("release_page.warnings_note") }}</p>
           {% for finding in view.warnings %}
           <div class="item-row">
             <span class="item-id warn">{{ finding_kinds.get(finding.kind, finding.kind) }}</span>
@@ -173,33 +173,33 @@
         {% endif %}
 
         <div class="rows">
-          <div class="rows-title">УДЕРЖАННЫЕ ОЖИДАЕМЫЕ ЗНАЧЕНИЯ</div>
+          <div class="rows-title">{{ t("release_page.withheld_title") }}</div>
           {% for item in view.withheld %}
-          <div class="item-row"><span class="item-id mono">{{ item.scenario }}</span><span class="mono small">шаг {{ item.step }} · {{ item.pointer }}</span></div>
-          {% else %}<p class="muted">Ничего не удержано.</p>{% endfor %}
+          <div class="item-row"><span class="item-id mono">{{ item.scenario }}</span><span class="mono small">{{ t("scenario.step", step=item.step) }} · {{ item.pointer }}</span></div>
+          {% else %}<p class="muted">{{ t("release_page.nothing_withheld") }}</p>{% endfor %}
         </div>
 
         <div class="rows">
-          <div class="rows-title">ОТБРОШЕНО ОРАКУЛОМ</div>
+          <div class="rows-title">{{ t("release_page.dropped") }}</div>
           {% if view.dropped is none %}
-          <p class="muted">Сценарии не перепроверялись на сброшенном оригинале.</p>
+          <p class="muted">{{ t("release_page.not_replayed") }}</p>
           {% else %}
-          {% for sid in view.dropped %}<div class="item-row"><span class="item-id mono">{{ sid }}</span><span class="item-desc">не воспроизводится на чистом оригинале</span></div>
-          {% else %}<p class="muted">Ничего не отброшено.</p>{% endfor %}
+          {% for sid in view.dropped %}<div class="item-row"><span class="item-id mono">{{ sid }}</span><span class="item-desc">{{ t("release_page.not_reproduced") }}</span></div>
+          {% else %}<p class="muted">{{ t("release_page.nothing_dropped") }}</p>{% endfor %}
           {% endif %}
         </div>
       </div>
     </div>
   </section>
 
-  <aside class="split-side panel stack" aria-label="Подпись">
-    <div class="kpi-label">ПОДПИСЬ ПАКЕТА</div>
+  <aside class="split-side panel stack" aria-label="{{ t('release_page.signature') }}">
+    <div class="kpi-label">{{ t("release_page.signature_title") }}</div>
     <div class="stack-sm">
-      <span class="muted small">SHA-256 пакета (спецификация + сценарии)</span>
+      <span class="muted small">{{ t("release_page.package_sha") }}</span>
       <code class="hash">{{ draft.package_sha256 }}</code>
     </div>
     <div class="stack-sm">
-      <span class="muted small">Черновик для чтения</span>
+      <span class="muted small">{{ t("release_page.readable_draft") }}</span>
       <code class="path">{{ view.markdown_path }}</code>
     </div>
 
@@ -208,21 +208,21 @@
     <div class="stack">
       <div class="released">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"></path></svg>
-        ВЫПУЩЕНО
+        {{ t("release_page.released") }}
       </div>
       <span class="mono muted small">{{ approval.get("approved_at")|stamp }} · {{ role_label(approval.get("role", "")) }}</span>
       <span>{{ approval.get("approver", "") }}</span>
-      <span class="muted small">Пакет передан в чистую зону. События barrier.approved и barrier.release записаны в журнал.</span>
-      <a class="btn btn-ghost" href="{{ project_url }}/parity">К ПАРИТЕТУ</a>
+      <span class="muted small">{{ t("release_page.released_note") }}</span>
+      <a class="btn btn-ghost" href="{{ project_url }}/parity">{{ t("release_page.to_parity") }}</a>
     </div>
     {% else %}
     <form class="stack" method="post" action="{{ project_url }}/release/approve" data-confirm>
       <input type="hidden" name="csrf" value="{{ csrf_token }}">
       <input type="hidden" name="sha" value="{{ draft.package_sha256 }}">
-      <label class="field">Подписант
+      <label class="field">{{ t("release_page.approver") }}
         <input type="text" name="approver" value="{{ approver }}" required autocomplete="name">
       </label>
-      <label class="field">Роль
+      <label class="field">{{ t("release_page.role") }}
         <select name="role">
           {% for value, label in roles.items() %}
           <option value="{{ value }}"{% if value == role %} selected{% endif %}>{{ label }}</option>
@@ -231,10 +231,10 @@
       </label>
       <label class="check">
         <input type="checkbox" name="confirm">
-        <span>Я просмотрел пакет: в нём нет кода, текстов и бренда оригинала.</span>
+        <span>{{ t("release_page.confirm") }}</span>
       </label>
-      <button type="submit" class="btn btn-primary"{% if busy %} disabled{% endif %} data-confirm-submit>СОГЛАСОВАТЬ И ВЫПУСТИТЬ</button>
-      <span class="muted small">Юрист заказчика получает итоговый пакет доказательств после аудита.</span>
+      <button type="submit" class="btn btn-primary"{% if busy %} disabled{% endif %} data-confirm-submit>{{ t("release_page.submit") }}</button>
+      <span class="muted small">{{ t("release_page.lawyer_note") }}</span>
     </form>
     {% endif %}
   </aside>

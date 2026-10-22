@@ -14,6 +14,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from reverseai.i18n import t
 from reverseai.messages import validation_summary
 from reverseai.pipeline import load_state
 from reverseai.project import Project
@@ -24,7 +25,7 @@ class ProjectNotFound(LookupError):
 
 
 class ProjectInvalid(ValueError):
-    """The project's card or pipeline state cannot be read; `reason` is one Russian line."""
+    """The project's card or pipeline state cannot be read; `reason` is one translated line."""
 
     def __init__(self, name: str, reason: str) -> None:
         super().__init__(f"project {name!r} is unreadable: {reason}")
@@ -36,7 +37,7 @@ def _problem(exc: BaseException) -> str:
     if isinstance(exc, ValidationError):
         return validation_summary(exc)
     if isinstance(exc, OSError):
-        return f"файл не читается ({exc.strerror or type(exc).__name__})"
+        return t("registry.unreadable_file", error=exc.strerror or type(exc).__name__)
     lines = str(exc).splitlines()
     return lines[0] if lines else type(exc).__name__
 
@@ -66,11 +67,9 @@ class ProjectRegistry:
         try:
             project = Project.load(self.root / name)
         except (ValidationError, ValueError, OSError) as exc:
-            raise ProjectInvalid(name, f"карточка повреждена: {_problem(exc)}") from exc
+            raise ProjectInvalid(name, t("registry.bad_card", problem=_problem(exc))) from exc
         try:
             load_state(project)
         except (ValidationError, ValueError, OSError) as exc:
-            raise ProjectInvalid(
-                name, f"состояние конвейера повреждено: {_problem(exc)}"
-            ) from exc
+            raise ProjectInvalid(name, t("registry.bad_state", problem=_problem(exc))) from exc
         return project

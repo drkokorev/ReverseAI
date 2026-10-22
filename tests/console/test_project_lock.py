@@ -14,6 +14,15 @@ from reverseai import pipeline
 from reverseai.cli import app as cli_app
 from reverseai.pipeline import Phase, load_state
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
+
 PROJECT_URL = "/projects/console-demo"
 BUSY = "проект занят другим процессом"
 

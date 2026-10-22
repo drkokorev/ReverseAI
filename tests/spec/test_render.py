@@ -1,5 +1,10 @@
+import pytest
+
 from reverseai.spec.model import ApiContract, BehaviorSpec, Entity, Evidence, SpecItem
 from reverseai.spec.render import render_markdown
+
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
 
 
 def make_spec(**over) -> BehaviorSpec:

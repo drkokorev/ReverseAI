@@ -15,6 +15,10 @@ from reverseai.project import Project
 from reverseai.spec.model import AnalystDraft, BehaviorSpec
 from reverseai.zones.store import Zone
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
 FIXTURES = Path(__file__).parent / "fixtures"
 
 CARD = {

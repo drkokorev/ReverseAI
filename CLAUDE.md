@@ -4,7 +4,7 @@ Clean-room reimplementation platform: black-box observation of a web target, a h
 
 ## Read first
 
-1. `docs/spec/decisions.md` — decision log (source of truth; D-001..D-015).
+1. `docs/spec/decisions.md` — decision log (source of truth; D-001..D-016).
 2. `docs/spec/spec.md` — product spec; items marked **[ПРЕДП]** are unconfirmed assumptions.
 3. `docs/superpowers/plans/2026-10-20-foundation-and-web-pipeline.md` — implementation plan of the prototype.
 
@@ -24,7 +24,8 @@ Clean-room reimplementation platform: black-box observation of a web target, a h
 - `parity` — differential run: full scenarios on the original, released projections on the clone; sanitized feedback to the clean zone.
 - `audit` — code similarity check and evidence pack.
 - `pipeline` — phase state machine and orchestration of all steps; re-running a phase invalidates every later one.
-- `cli` — `reverseai` Typer app (user-facing text in Russian); `messages` — Russian phase labels and error messages shared with the console.
+- `cli` — `reverseai` Typer app (global `--lang en|ru`); `messages` — phase labels, error messages and build summary lines shared with the console.
+- `i18n` — `t()`, `Labels`, the active language (context variable) and the `en` / `ru` catalogs.
 - `console` — web console (`reverseai console`): FastAPI + Jinja pages over the same pipeline calls, background job runner, `read/` view models, `routes/`, `templates/`, `static/`.
 - `bench` — benchmark harness and bundled in-process target server.
 
@@ -43,7 +44,7 @@ Clean-room reimplementation platform: black-box observation of a web target, a h
 
 ## Language
 
-User-facing text (CLI output, console, reports, evidence pack) is Russian. `README.md` is English; `README.ru.md` is its Russian counterpart — keep both in sync. Code, identifiers, comments and log messages are English.
+User-facing text (CLI output, console, job logs, errors, release draft, spec markdown, evidence pack) goes through the i18n catalogs (`src/reverseai/i18n/`: `en.py` default, `ru.py` supported, `t(key, **params)`, plural forms via `count=`) and is never hardcoded; add every new string to both catalogs (tests check keys, placeholders and that no Cyrillic lives outside `ru.py`). The CLI takes `--lang` / `REVERSEAI_LANG`; the console takes `--lang` and a per-browser EN/RU cookie; jobs inherit the request's language. LLM prompts stay English. `README.md` is English; `README.ru.md` is its Russian counterpart — keep both in sync. Code, identifiers, comments and log messages are English.
 
 ## Commands
 

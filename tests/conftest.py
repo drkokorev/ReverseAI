@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from reverseai.i18n import LANG_ENV, use_language
+
 DOCKER_TEST_IMAGE = "python:3.12-slim"
 
 
@@ -49,3 +51,19 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
         reason = docker_skip_reason()
         if reason:
             pytest.skip(reason)
+
+
+@pytest.fixture(autouse=True)
+def _english_by_default(monkeypatch: pytest.MonkeyPatch):
+    """Every test starts in the default language (English), with REVERSEAI_LANG unset."""
+    monkeypatch.delenv(LANG_ENV, raising=False)
+    with use_language("en"):
+        yield
+
+
+@pytest.fixture
+def lang_ru(monkeypatch: pytest.MonkeyPatch):
+    """Russian for this test: the active language, and REVERSEAI_LANG for CLI invocations."""
+    monkeypatch.setenv(LANG_ENV, "ru")
+    with use_language("ru"):
+        yield

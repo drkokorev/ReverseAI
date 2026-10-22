@@ -441,7 +441,7 @@ def implement(
     progress = [0]
     try:
         run, iterations = _loop(
-            gateway, sandbox, root, config, fmt, render_markdown(spec), scenarios_json,
+            gateway, sandbox, root, config, fmt, render_markdown(spec, lang="en"), scenarios_json,
             len(scenarios), scrub, ledger, policy, progress,
         )
     except BaseException as exc:

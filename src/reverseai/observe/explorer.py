@@ -251,12 +251,12 @@ def _websocket_router(allowed: set[str], skipped: list[str]) -> Callable[[WebSoc
 
 def _check_scope(config: ExplorerConfig, card: ProjectCard) -> set[str]:
     if config.submit_forms and not card.target_is_sandbox:
-        raise IntakeError("submit_forms requires a sandbox target (card.target_is_sandbox)")
+        raise IntakeError("submit_forms_needs_sandbox")
     allowed = {d.lower() for d in config.allowed_domains}
     if not allowed <= {d.lower() for d in card.allowed_domains}:
-        raise IntakeError("explorer allowed_domains must be a subset of the card's allowed_domains")
+        raise IntakeError("explorer_domains_subset")
     if _hostname(config.start_url) not in allowed:
-        raise IntakeError(f"start_url host {_hostname(config.start_url)!r} is not in allowed_domains")
+        raise IntakeError("start_host_not_allowed", host=_hostname(config.start_url))
     return allowed
 
 

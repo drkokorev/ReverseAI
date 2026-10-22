@@ -7,6 +7,15 @@ import pytest
 from reverseai.barrier.release import Approval
 from reverseai.console.roles import CONSOLE_ROLES, approval_role, role_label
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
+
 ACCEPTED = set(get_args(Approval.model_fields["role"].annotation))
 
 

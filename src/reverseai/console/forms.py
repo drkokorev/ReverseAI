@@ -1,6 +1,6 @@
 """Form input: the new-project form (a ProjectCard) and numeric phase options.
 
-Errors are Russian sentences shown next to the form.
+Errors are translated sentences shown next to the form.
 """
 
 from __future__ import annotations
@@ -11,46 +11,24 @@ from dataclasses import dataclass, field
 
 from pydantic import ValidationError
 
+from reverseai.i18n import CATALOGS, DEFAULT_LANG, Labels, t
 from reverseai.messages import user_message, validation_summary
 from reverseai.project import Attestation, IntakeError, Mode, ProjectCard
 
-JURISDICTIONS: dict[str, str] = {
-    "us": "США",
-    "eu": "ЕС",
-    "cn": "Китай",
-    "self": "Собственный хостинг",
-}
+JURISDICTIONS: Labels[str] = Labels("jurisdiction", ["us", "eu", "cn", "self"])
 DEFAULT_JURISDICTIONS = ("us", "eu", "self")
-MODE_OPTIONS: dict[str, str] = {
-    Mode.LEGACY.value: "Legacy (замена системы)",
-    Mode.IMPORT_SUBSTITUTION.value: "Импортозамещение",
-}
-
-_INTAKE_MESSAGES: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"attestation of lawful access is required"),
-     "Нужно подтвердить законность доступа к цели."),
-    (re.compile(r"target host ['\"](.*)['\"] is not in allowed_domains"),
-     "Хост цели «{0}» не входит в разрешённые домены."),
-    (re.compile(r"product name ['\"](.*)['\"] reuses a brand term"),
-     "Название продукта «{0}» повторяет бренд оригинала."),
-    (re.compile(r"project directory already exists"),
-     "Проект с таким именем уже существует."),
-    (re.compile(r"has no usable characters"),
-     "В названии проекта нет букв или цифр."),
-]
+MODE_OPTIONS: Labels[str] = Labels("mode_option", [m.value for m in Mode])
 
 
 class FormError(ValueError):
-    """Invalid form input; the message is a Russian sentence for the user."""
+    """Invalid form input; the message is a translated sentence for the user."""
 
 
 def intake_message(exc: IntakeError) -> str:
-    """Russian wording of the intake gate's refusal (falls back to the CLI's message)."""
-    text = str(exc)
-    for pattern, message in _INTAKE_MESSAGES:
-        match = pattern.search(text)
-        if match:
-            return message.format(*match.groups())
+    """The form's wording of the intake gate's refusal (falls back to the CLI's message)."""
+    key = f"form.intake.{exc.key}"
+    if key in CATALOGS[DEFAULT_LANG]:
+        return t(key, **exc.params)
     return user_message(exc)
 
 
@@ -78,19 +56,19 @@ class NewProjectForm:
     def card(self) -> ProjectCard:
         """The project card; FormError for anything the form itself can tell is wrong."""
         if not self.name.strip():
-            raise FormError("Укажите название проекта.")
+            raise FormError(t("form.name_required"))
         if self.mode not in MODE_OPTIONS:
-            raise FormError("Неизвестный режим проекта.")
+            raise FormError(t("form.unknown_mode"))
         if not self.target_base_url.strip():
-            raise FormError("Укажите адрес цели.")
+            raise FormError(t("form.url_required"))
         domains = [d.lower() for d in _items(self.allowed_domains)]
         if not domains:
-            raise FormError("Укажите хотя бы один разрешённый домен.")
+            raise FormError(t("form.domains_required"))
         if not self.product_name.strip():
-            raise FormError("Укажите название продукта клона.")
+            raise FormError(t("form.product_required"))
         jurisdictions = [j for j in self.jurisdictions if j in JURISDICTIONS]
         if not jurisdictions:
-            raise FormError("Выберите хотя бы одну юрисдикцию.")
+            raise FormError(t("form.jurisdiction_required"))
         signed_at = self.signed_at.strip() or dt.datetime.now(dt.UTC).isoformat()
         try:
             return ProjectCard.model_validate(
@@ -113,7 +91,7 @@ class NewProjectForm:
                 }
             )
         except ValidationError as exc:
-            raise FormError(f"Некорректные данные карточки: {validation_summary(exc)}.") from exc
+            raise FormError(t("form.invalid_card", summary=validation_summary(exc))) from exc
 
 
 def positive_int(raw: str, default: int, message: str) -> int:

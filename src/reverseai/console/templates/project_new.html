@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Новый проект{% endblock %}
+{% block title %}{{ t("new.page_title") }}{% endblock %}
 {% block page_class %}tight{% endblock %}
 {% block content %}
 <section class="hero">
   <div class="hero-text">
-    <div class="eyebrow">ЭТАП 01 · ПРИЁМ</div>
-    <h1 class="display display-sm">НОВЫЙ ПРОЕКТ</h1>
-    <p class="lede">Карточка проекта проходит юридический фильтр: законный доступ к цели, хост цели среди разрешённых доменов, название клона без бренда оригинала.</p>
+    <div class="eyebrow">{{ t("new.eyebrow") }}</div>
+    <h1 class="display display-sm">{{ t("new.title") }}</h1>
+    <p class="lede">{{ t("new.lede") }}</p>
   </div>
 </section>
 
@@ -15,49 +15,49 @@
   {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
   <fieldset class="form-section">
-    <legend class="section-title">ПРОЕКТ</legend>
+    <legend class="section-title">{{ t("new.section.project") }}</legend>
     <div class="form-grid">
-      <label class="field">Название проекта
+      <label class="field">{{ t("new.name") }}
         <input type="text" name="name" value="{{ form.name }}" required autocomplete="off">
       </label>
-      <label class="field">Режим
+      <label class="field">{{ t("new.mode") }}
         <select name="mode">
           {% for value, label in modes.items() %}
           <option value="{{ value }}"{% if form.mode == value %} selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </label>
-      <label class="field">Название продукта клона
+      <label class="field">{{ t("new.product") }}
         <input type="text" name="product_name" value="{{ form.product_name }}" required autocomplete="off">
-        <span class="hint">Не должно повторять бренд оригинала.</span>
+        <span class="hint">{{ t("new.product_hint") }}</span>
       </label>
-      <label class="field">Бренд оригинала
+      <label class="field">{{ t("new.brand") }}
         <textarea name="brand_terms" rows="3">{{ form.brand_terms }}</textarea>
-        <span class="hint">Через запятую или с новой строки. Вырезается из всего, что пересекает барьер.</span>
+        <span class="hint">{{ t("new.brand_hint") }}</span>
       </label>
     </div>
   </fieldset>
 
   <fieldset class="form-section">
-    <legend class="section-title">ЦЕЛЬ</legend>
+    <legend class="section-title">{{ t("new.section.target") }}</legend>
     <div class="form-grid">
-      <label class="field">Адрес цели
+      <label class="field">{{ t("new.url") }}
         <input type="url" name="target_base_url" value="{{ form.target_base_url }}" placeholder="https://app.example.com/" required>
       </label>
-      <label class="field">Разрешённые домены
+      <label class="field">{{ t("new.domains") }}
         <textarea name="allowed_domains" rows="3">{{ form.allowed_domains }}</textarea>
-        <span class="hint">Хост цели должен быть в списке. Через запятую или с новой строки.</span>
+        <span class="hint">{{ t("new.domains_hint") }}</span>
       </label>
     </div>
     <label class="check">
       <input type="checkbox" name="target_is_sandbox"{% if form.target_is_sandbox %} checked{% endif %}>
-      <span>Цель — песочница: разрешены отправка форм, зондирование API и сценарии с записью.</span>
+      <span>{{ t("new.sandbox") }}</span>
     </label>
   </fieldset>
 
   <fieldset class="form-section">
-    <legend class="section-title">ПОЛИТИКА ДАННЫХ</legend>
-    <div class="checks-row" role="group" aria-label="Юрисдикции провайдеров моделей">
+    <legend class="section-title">{{ t("new.section.policy") }}</legend>
+    <div class="checks-row" role="group" aria-label="{{ t('new.jurisdictions_label') }}">
       {% for value, label in jurisdictions.items() %}
       <label class="check">
         <input type="checkbox" name="jurisdictions" value="{{ value }}"{% if value in form.jurisdictions %} checked{% endif %}>
@@ -65,37 +65,37 @@
       </label>
       {% endfor %}
     </div>
-    <span class="hint">Модели вызываются только у провайдеров из выбранных юрисдикций.</span>
+    <span class="hint">{{ t("new.jurisdictions_hint") }}</span>
     <div class="form-grid">
-      <label class="field">Юрисдикция проекта
+      <label class="field">{{ t("new.jurisdiction") }}
         <input type="text" name="jurisdiction" value="{{ form.jurisdiction }}" autocomplete="off">
       </label>
     </div>
   </fieldset>
 
   <fieldset class="form-section">
-    <legend class="section-title">АТТЕСТАЦИЯ</legend>
+    <legend class="section-title">{{ t("new.section.attestation") }}</legend>
     <div class="form-grid">
-      <label class="field">Основание доступа
-        <input type="text" name="basis" value="{{ form.basis }}" placeholder="Договор, лицензия, собственная система" autocomplete="off">
+      <label class="field">{{ t("new.basis") }}
+        <input type="text" name="basis" value="{{ form.basis }}" placeholder="{{ t('new.basis_placeholder') }}" autocomplete="off">
       </label>
-      <label class="field">Кто подписал
+      <label class="field">{{ t("new.signed_by") }}
         <input type="text" name="signed_by" value="{{ form.signed_by }}" autocomplete="name">
       </label>
-      <label class="field">Когда подписано
+      <label class="field">{{ t("new.signed_at") }}
         <input type="text" name="signed_at" value="{{ form.signed_at }}" placeholder="2026-10-22T10:00:00Z" autocomplete="off">
-        <span class="hint">ISO 8601. Пусто — текущее время.</span>
+        <span class="hint">{{ t("new.signed_at_hint") }}</span>
       </label>
     </div>
     <label class="check">
       <input type="checkbox" name="lawful_access"{% if form.lawful_access %} checked{% endif %}>
-      <span>Подтверждаю законный доступ к цели и право изучать её поведение.</span>
+      <span>{{ t("new.lawful_access") }}</span>
     </label>
   </fieldset>
 
   <div class="actions start">
-    <button type="submit" class="btn btn-primary">СОЗДАТЬ ПРОЕКТ</button>
-    <a class="btn btn-ghost" href="/">ОТМЕНА</a>
+    <button type="submit" class="btn btn-primary">{{ t("new.submit") }}</button>
+    <a class="btn btn-ghost" href="/">{{ t("new.cancel") }}</a>
   </div>
 </form>
 {% endblock %}

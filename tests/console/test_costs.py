@@ -2,9 +2,18 @@
 
 import re
 
+import pytest
 from typer.testing import CliRunner
 
 from reverseai.cli import app as cli_app
+
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
 
 
 def test_costs_match_the_cli(console) -> None:

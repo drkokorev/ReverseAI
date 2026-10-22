@@ -6,6 +6,15 @@ from reverseai.console.security import is_loopback
 from reverseai.pipeline import load_state, save_state
 from reverseai.project import Attestation, Mode, ProjectCard, create_project
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
+
 PAGES = ["/", "/projects/new", "/projects/console-demo", "/projects/console-demo/release",
          "/projects/console-demo/parity", "/projects/console-demo/costs"]
 

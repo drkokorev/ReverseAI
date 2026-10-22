@@ -278,7 +278,7 @@ def run_observe(
     _require(project, Phase.OBSERVE)
     card = project.card
     if (submit_forms or probe) and not card.target_is_sandbox:
-        raise IntakeError("submitting forms and probing require card.target_is_sandbox")
+        raise IntakeError("observe_needs_sandbox")
     config = ExplorerConfig(
         start_url=card.target_base_url,
         allowed_domains=card.allowed_domains,
@@ -332,7 +332,7 @@ def run_oracle(project: Project, *, reset_original: Callable[[], None] | None = 
     """
     state = _require(project, Phase.ORACLE)
     if reset_original is not None and not project.card.target_is_sandbox:
-        raise IntakeError("replaying scenarios on the original requires card.target_is_sandbox")
+        raise IntakeError("replay_needs_sandbox")
     scenarios = build_scenarios(
         _exchanges(project, _ref(state, "exchanges")),
         _endpoints(project, _ref(state, "endpoints")),

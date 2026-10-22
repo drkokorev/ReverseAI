@@ -16,24 +16,11 @@ from reverseai.console.context import GatewayFactory, SandboxFactory
 from reverseai.console.evidence import evidence_dir
 from reverseai.console.jobs import Action, JobLog
 from reverseai.console.roles import approval_role
-from reverseai.messages import PHASE_LABELS, PlainError
+from reverseai.i18n import t
+from reverseai.messages import PHASE_LABELS, PlainError, build_summary
 from reverseai.parity.differential import meets_threshold
 from reverseai.pipeline import Phase
 from reverseai.project import Project, project_lock
-
-UNSTABLE_REFUSED = (
-    "выпущенные сценарии изменяют данные цели, а сбросить её между сценариями "
-    "консоль не умеет: результаты паритета будут нестабильны. "
-    "Отметьте «Разрешить нестабильный прогон», чтобы продолжить."
-)
-LOCAL_SANDBOX_WARNING = "Внимание: LocalSandbox не изолирует код клона от этой машины."
-THRESHOLD_MISSED = "Порог не достигнут."
-AUDIT_FAILED = "Аудит не пройден."
-ALREADY_RELEASED = (
-    "пакет уже выпущен. Чтобы выпустить новый, повторите подготовку выпуска."
-)
-DRAFT_CHANGED = "черновик изменился — обновите страницу и проверьте пакет заново"
-
 
 # URL action -> the phase whose prerequisite gates it (and whose label names the job).
 RUNNABLE: dict[str, Phase] = {
@@ -44,15 +31,14 @@ RUNNABLE: dict[str, Phase] = {
     "build": Phase.IMPLEMENT,
     "audit": Phase.AUDIT,
 }
-BUILD_LABEL = "Реализация и паритет"
 
 
 def action_label(action: str) -> str:
-    return BUILD_LABEL if action == "build" else PHASE_LABELS[RUNNABLE[action]]
+    return t("console.build_label") if action == "build" else PHASE_LABELS[RUNNABLE[action]]
 
 
 def done_line(phase: Phase) -> str:
-    return f"Этап «{PHASE_LABELS[phase]}» ({phase.value}) завершён."
+    return t("phase_done", label=PHASE_LABELS[phase], phase=phase.value)
 
 
 def ensure_free(project: Project) -> None:
@@ -65,7 +51,7 @@ def ensure_free(project: Project) -> None:
 
 
 def locked(project: Project, work: Action) -> Action:
-    """`work` with the project lock held for its whole run; busy → the job fails in Russian."""
+    """`work` with the project lock held for its whole run; busy → the job fails with a message."""
 
     def run(log: JobLog) -> str | None:
         with project_lock(project.dir):
@@ -103,10 +89,10 @@ def prepare_release_job(project: Project) -> Action:
         pipeline.run_prepare_release(project)
         sha = pipeline.draft_sha256(project)
         draft_file = pipeline.release_draft_path(project)
-        log(f"Черновик для согласования: {project.dir.name}/{draft_file.name}")
-        log(f"SHA-256 пакета (спецификация + сценарии): {sha}")
+        log(t("release.draft_for_review", path=f"{project.dir.name}/{draft_file.name}"))
+        log(t("release.package_sha", sha=sha))
         log(done_line(Phase.PREPARE_RELEASE))
-        log("Для выпуска согласуйте пакет на странице «Согласование».")
+        log(t("console.prepare_release.next"))
 
     return work
 
@@ -122,30 +108,23 @@ def build_job(
     def work(log: JobLog) -> str | None:
         unstable = pipeline.released_scenarios_write(project)
         if project.card.target_is_sandbox and not allow_unstable and unstable:
-            raise PlainError(UNSTABLE_REFUSED)
+            raise PlainError(t("console.build.unstable_refused"))
         workdir = pipeline.workspace_dir(project)
         if not getattr(sandbox_factory(workdir), "isolated", False):
-            log(LOCAL_SANDBOX_WARNING)
+            log(t("build.local_sandbox_warning"))
         report = pipeline.run_build_loop(
             project,
             gateway_factory(project),
             lambda: sandbox_factory(workdir),
             max_rounds=max_rounds,
         )
-        log(
-            f"Паритет: {report.passed}/{report.total} ({report.ratio:.2%}), "
-            f"критичные: {report.critical_passed}/{report.critical_total} "
-            f"({report.critical_ratio:.2%}), нестабильных: {len(report.unstable)}"
-        )
-        if report.skipped_unsafe:
-            log(f"Пропущено сценариев с записью (цель не песочница): {len(report.skipped_unsafe)}")
-        log(f"Расхождений по удержанным значениям: {report.withheld_mismatches}")
-        log(f"Рабочий каталог клона: {workdir}")
+        for line in build_summary(report, workdir):
+            log(line)
         if meets_threshold(report):
-            log("Порог достигнут.")
+            log(t("build.threshold_met"))
             return None
-        log(THRESHOLD_MISSED)
-        return THRESHOLD_MISSED
+        log(t("build.threshold_missed"))
+        return t("build.threshold_missed")
 
     return work
 
@@ -153,15 +132,15 @@ def build_job(
 def audit_job(project: Project) -> Action:
     def work(log: JobLog) -> str | None:
         result = pipeline.run_audit(project, evidence_dir(project))
-        log(f"Пакет доказательств: {result.zip_path}")
+        log(t("audit.pack", path=result.zip_path))
         log(done_line(Phase.AUDIT))
         similarity = result.similarity
-        log(f"Максимальное сходство кода: {similarity.max_score:.4f} (порог {similarity.threshold})")
-        log(f"Упоминаний бренда в коде: {len(result.brand_hits)}")
+        log(t("audit.similarity", score=similarity.max_score, threshold=similarity.threshold))
+        log(t("audit.brand_hits", count=len(result.brand_hits)))
         if result.passed:
             return None
-        log(AUDIT_FAILED)
-        return AUDIT_FAILED
+        log(t("audit.failed"))
+        return t("audit.failed")
 
     return work
 
@@ -174,7 +153,7 @@ def approve(project: Project, *, approver: str, role: str, sha: str) -> None:
     """
     with project_lock(project.dir):
         if Phase.RELEASE in pipeline.load_state(project).completed:
-            raise PlainError(ALREADY_RELEASED)
+            raise PlainError(t("console.already_released"))
         approval = Approval(
             approver=approver,
             role=approval_role(role),
@@ -185,5 +164,5 @@ def approve(project: Project, *, approver: str, role: str, sha: str) -> None:
             pipeline.run_release(project, approval)  # logs barrier.rejected on a mismatch
         except ReleaseError:
             if sha != pipeline.draft_sha256(project):  # the page showed an older draft
-                raise PlainError(DRAFT_CHANGED) from None
+                raise PlainError(t("console.draft_changed")) from None
             raise

@@ -304,6 +304,7 @@ def _branded_scenarios() -> list[Scenario]:
     ]
 
 
+@pytest.mark.usefixtures("lang_ru")  # checks the Russian copy
 def test_review_markdown_shows_released_scenarios_and_withheld_pointers(project):
     ref = prepare_release(project, _spec(), _branded_scenarios())
     draft = _draft(project, ref.id)
@@ -386,6 +387,7 @@ def test_long_path_seen_in_the_original_survives_release_unchanged(project):
     assert package["scenarios"][0]["steps"][0]["step"]["path"] == next_link
 
 
+@pytest.mark.usefixtures("lang_ru")  # checks the Russian copy
 def test_renamed_keys_agree_across_spec_and_scenarios_and_release(project):
     schema = {"type": "object", "properties": {"TaskBoard": {"type": "string"},
                                                "Tasklet": {"type": "integer"}},
@@ -415,6 +417,7 @@ def test_renamed_keys_agree_across_spec_and_scenarios_and_release(project):
     assert "taskboard" not in blob
 
 
+@pytest.mark.usefixtures("lang_ru")  # checks the Russian copy
 def test_body_values_seen_in_the_original_warn_but_release(project):
     scenarios = [Scenario(id="S-001", title="Create", steps=[ScenarioStep(
         step=Step(method="POST", path="/api/tasks",
@@ -438,3 +441,29 @@ def test_body_values_seen_in_the_original_warn_but_release(project):
     package = project.store.get_json(out.id, Zone.CLEAN)
     kinds = [f["kind"] for f in package["sanitize_report"]["findings"]]
     assert kinds.count("body_warning") == 2
+
+
+def test_review_markdown_is_english_by_default(project):
+    scenarios = _branded_scenarios()
+    scenarios[0].critical = True
+    prepare_release(project, _spec(), scenarios)
+    [md_ref] = project.store.list(Zone.DIRTY, "release_draft_md")
+    md = project.store.get(md_ref.id, Zone.DIRTY).decode("utf-8")
+    assert md.startswith("# Tasklet — behavioral spec v1\n")
+    for heading in ("## Overview", "## Features", "## Scenarios", "## Withheld expected values",
+                    "## Sanitizer report"):
+        assert heading in md, heading
+    assert "### S-001: Create (critical)" in md
+    assert "→ status 201" in md and "   - shape: `" in md
+    assert "S-001, step 1: `/msg`" in md
+    assert "Package SHA-256 (spec + scenarios): `" in md
+    assert "Scenarios: 1" in md
+    assert "- brand — scenarios[S-001].steps[0].path" in md
+
+
+def test_release_error_reason_in_the_ledger_is_english_in_any_language(project, lang_ru):
+    ref = prepare_release(project, _spec(), _branded_scenarios())
+    with pytest.raises(ReleaseError, match="согласование не совпадает"):
+        release(project, ref.id, _approval("0" * 64))
+    [event] = [e for e in project.ledger.events() if e.type == "barrier.rejected"]
+    assert event.payload["reason"] == "approval does not match the draft package hash"

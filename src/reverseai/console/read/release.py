@@ -9,18 +9,14 @@ from typing import Any
 from reverseai.barrier.release import PreparedRelease
 from reverseai.barrier.sanitizer import WARNING_KINDS, Finding, withheld_expectations
 from reverseai.console.artifacts import ArtifactCache
+from reverseai.i18n import Labels
 from reverseai.oracle.model import Scenario
 from reverseai.pipeline import Phase, load_state, release_draft_path
 from reverseai.project import Project
 
-FINDING_KINDS: dict[str, str] = {
-    "code": "код",
-    "verbatim": "дословный текст",
-    "brand": "бренд",
-    "url": "домен",
-    "body_warning": "предупреждение (тело запроса)",  # D-012: shown, never blocking
-}
-TABS: dict[str, str] = {"spec": "СПЕЦИФИКАЦИЯ", "scenarios": "СЦЕНАРИИ", "cleanup": "ОЧИСТКА"}
+# body_warning (D-012) is shown to the approver, never blocking.
+FINDING_KINDS: Labels[str] = Labels("finding", ["code", "verbatim", "brand", "url", "body_warning"])
+TABS: Labels[str] = Labels("release_page.tab", ["spec", "scenarios", "cleanup"])
 
 
 def compact(value: Any) -> str:

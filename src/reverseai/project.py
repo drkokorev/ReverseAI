@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
+from reverseai.i18n import has, t
 from reverseai.llm.policy import DataPolicy
 from reverseai.provenance.ledger import Ledger
 from reverseai.zones.store import ArtifactStore
@@ -28,17 +29,25 @@ _INITIAL_STATE = {"completed": [], "refs": {}, "parity_rounds": 0}
 
 
 class IntakeError(Exception):
-    """The project card fails the legal/intake gate."""
+    """The project card fails the legal/intake gate.
+
+    `key` names the refusal (catalog entry `intake.<key>`), `params` fill it in; the message
+    is in the language active when the error is raised. Any other text is taken as the
+    message itself.
+    """
+
+    def __init__(self, key: str, **params: object) -> None:
+        entry = f"intake.{key}"
+        super().__init__(t(entry, **params) if has(entry) else key)
+        self.key = key
+        self.params = params
 
 
 class ProjectBusy(RuntimeError):
-    """Another command or console job holds the project lock (the message is Russian)."""
+    """Another command or console job holds the project lock (the message is translated)."""
 
     def __init__(self, project_dir: Path) -> None:
-        super().__init__(
-            f"проект занят другим процессом: {project_dir} (выполняется другая команда или "
-            "задача консоли). Дождитесь её завершения и повторите."
-        )
+        super().__init__(t("project.busy", path=project_dir))
         self.project_dir = project_dir
 
 
@@ -121,7 +130,7 @@ def risk_flags(card: ProjectCard) -> list[str]:
 def slug(name: str) -> str:
     result = re.sub(r"[\W_]+", "-", name.lower()).strip("-")
     if not result:
-        raise IntakeError(f"project name {name!r} has no usable characters")
+        raise IntakeError("no_usable_characters", name=name)
     return result
 
 
@@ -145,13 +154,13 @@ def _reuses_brand(product_name: str, brand_terms: list[str]) -> bool:
 
 def _validate(card: ProjectCard) -> None:
     if not card.attestation.lawful_access:
-        raise IntakeError("attestation of lawful access is required")
+        raise IntakeError("attestation_required")
     host = (urlparse(card.target_base_url).hostname or "").lower()
     allowed = {d.lower() for d in card.allowed_domains}
     if not host or host not in allowed:
-        raise IntakeError(f"target host {host!r} is not in allowed_domains")
+        raise IntakeError("host_not_allowed", host=host)
     if _reuses_brand(card.product_name, card.brand_terms):
-        raise IntakeError(f"product name {card.product_name!r} reuses a brand term")
+        raise IntakeError("product_reuses_brand", name=card.product_name)
 
 
 class Project:
@@ -172,12 +181,12 @@ def create_project(card: ProjectCard, projects_root: Path) -> Project:
     _validate(card)
     project_dir = Path(projects_root) / slug(card.name)
     if project_dir.exists():
-        raise IntakeError(f"project directory already exists: {project_dir}")
+        raise IntakeError("project_exists", path=project_dir)
     project_dir.parent.mkdir(parents=True, exist_ok=True)
     try:
         project_dir.mkdir()  # atomic: whoever creates it first owns the project
     except FileExistsError:
-        raise IntakeError(f"project directory already exists: {project_dir}") from None
+        raise IntakeError("project_exists", path=project_dir) from None
     (project_dir / "card.json").write_text(
         card.model_dump_json(indent=2) + "\n", encoding="utf-8"
     )

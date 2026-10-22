@@ -12,6 +12,7 @@ from reverseai.console.read.release import FINDING_KINDS, TABS, compact, release
 from reverseai.console.roles import CONSOLE_ROLES, role_label
 from reverseai.console.routes import console, require_csrf
 from reverseai.console.templating import project_path, render
+from reverseai.i18n import t
 from reverseai.messages import PlainError, user_message
 from reverseai.pipeline import PhaseOrderError
 from reverseai.project import ProjectBusy
@@ -78,16 +79,16 @@ def approve(
                      approver=approver, role=role)
 
     if not approver.strip():
-        return refuse("Укажите, кто согласует пакет.", 400)
+        return refuse(t("approve.approver_required"), 400)
     if role not in CONSOLE_ROLES:
-        return refuse("Неизвестная роль согласующего.", 400)
+        return refuse(t("approve.unknown_role"), 400)
     if not confirm:
-        return refuse("Подтвердите, что просмотрели пакет: отметьте флажок.", 400)
+        return refuse(t("approve.confirm_required"), 400)
     job = ctx.jobs.current(name)
     if job is not None and job.running:
-        return refuse(f"Дождитесь завершения задачи «{job.label}».", 409)
+        return refuse(t("approve.wait_job", label=job.label), 409)
     try:
         actions.approve(project, approver=approver.strip(), role=role, sha=sha.strip())
     except (PhaseOrderError, ReleaseError, PlainError, ProjectBusy) as exc:
-        return refuse(f"Ошибка: {user_message(exc)}", 409)
+        return refuse(t("cli.error", message=user_message(exc)), 409)
     return RedirectResponse(f"{project_path(name)}/release", status_code=303)

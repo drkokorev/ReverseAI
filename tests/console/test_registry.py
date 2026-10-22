@@ -3,11 +3,21 @@ are reported in Russian instead of failing the whole page."""
 
 import json
 
+import pytest
 from typer.testing import CliRunner
 
 from reverseai import pipeline
 from reverseai.cli import app as cli_app
 from reverseai.project import Project
+
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
 
 PROJECT_URL = "/projects/console-demo"
 

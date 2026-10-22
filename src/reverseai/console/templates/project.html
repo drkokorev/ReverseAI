@@ -5,13 +5,13 @@
 {% set done_count = view.state.completed|length %}
 <section class="hero">
   <div class="hero-text">
-    <div class="eyebrow">ПРОЕКТ {{ card.name }} · {{ mode }} · {% if card.target_is_sandbox %}ПЕСОЧНИЦА{% else %}ТОЛЬКО ЧТЕНИЕ{% endif %} · <span class="mono">{{ host }}</span></div>
+    <div class="eyebrow">{{ t("overview.eyebrow", name=card.name) }} · {{ mode }} · {% if card.target_is_sandbox %}{{ t("overview.sandbox") }}{% else %}{{ t("overview.read_only") }}{% endif %} · <span class="mono">{{ host }}</span></div>
     <h1 class="display">{{ card.product_name|upper }}</h1>
-    <p class="lede">Независимая реимплементация цели по наблюдаемому поведению. Завершено {{ done_count }} {{ plural(done_count, "этап", "этапа", "этапов") }} из 9, журнал происхождения {% if view.integrity.ok %}цел{% else %}повреждён{% endif %}.</p>
+    <p class="lede">{{ t("overview.lede_intact" if view.integrity.ok else "overview.lede_broken", count=done_count) }}</p>
   </div>
   <div class="actions">
-    <a class="btn btn-ghost" href="{{ project_url }}/release">ВЫПУСК</a>
-    <a class="btn btn-primary" href="{{ project_url }}/parity">ПАКЕТ ДОКАЗАТЕЛЬСТВ</a>
+    <a class="btn btn-ghost" href="{{ project_url }}/release">{{ t("overview.release") }}</a>
+    <a class="btn btn-primary" href="{{ project_url }}/parity">{{ t("overview.evidence") }}</a>
   </div>
 </section>
 
@@ -19,7 +19,7 @@
 
 <section aria-labelledby="track" class="stack">
   <div class="section-head">
-    <h2 id="track" class="section-title">ТРАЕКТОРИЯ</h2>
+    <h2 id="track" class="section-title">{{ t("overview.track") }}</h2>
     {% if view.first_ts %}<div class="mono muted small">{{ view.elapsed }} · {{ view.first_ts|hms }} → {{ view.last_ts|hms }} UTC</div>{% endif %}
   </div>
   <div class="track">
@@ -30,7 +30,7 @@
         <div class="stage-body">
           <span class="mono muted small">{{ stage.num }} · {% if stage.time %}{{ stage.time|hms }}{% else %}—{% endif %}</span>
           <span class="stage-name">{{ stage.name }}</span>
-          <span class="stage-detail">{% if stage.done %}{{ stage.detail or "Завершён" }}{% elif stage.ready and stage.phase.value == "release" %}Ждёт согласования{% elif stage.ready %}Можно запускать{% else %}Ожидает{% endif %}</span>
+          <span class="stage-detail">{% if stage.done %}{{ stage.detail or t("overview.stage.done") }}{% elif stage.ready and stage.phase.value == "release" %}{{ t("overview.stage.awaiting_approval") }}{% elif stage.ready %}{{ t("overview.stage.ready") }}{% else %}{{ t("overview.stage.waiting") }}{% endif %}</span>
           <span class="chip">{{ stage.zone }}</span>
         </div>
       </li>
@@ -39,7 +39,7 @@
   </div>
 </section>
 
-<section aria-label="Ключевые показатели" class="kpis">
+<section aria-label="{{ t('overview.kpis') }}" class="kpis">
   {% for kpi in view.kpis %}
   <div class="kpi" data-kpi="{{ kpi.key }}">
     <span class="kpi-label">{{ kpi.label }}</span>
@@ -55,7 +55,7 @@
 
 <section class="split">
   <div class="split-side stack">
-    <h2 class="section-title">ЗОНЫ</h2>
+    <h2 class="section-title">{{ t("overview.zones") }}</h2>
     <div class="rows">
       {% for zone in view.zones %}
       <div class="zone-row" data-zone="{{ zone.zone }}">
@@ -65,41 +65,41 @@
       </div>
       {% endfor %}
     </div>
-    <p class="note">Чистая зона читает только выпущенный пакет. Попытка чтения из грязной зоны блокируется и пишется в журнал.</p>
+    <p class="note">{{ t("overview.zones_note") }}</p>
   </div>
 
   <div id="ledger" class="split-main stack">
     <div class="section-head">
-      <h2 class="section-title">ЖУРНАЛ ПРОИСХОЖДЕНИЯ</h2>
+      <h2 class="section-title">{{ t("overview.ledger") }}</h2>
       {% if view.integrity.ok %}
       <span class="integrity ok">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"></path></svg>
-        {{ view.integrity.count }} {{ plural(view.integrity.count, "событие", "события", "событий") }} · цепочка цела
+        {{ t("overview.integrity_ok", count=view.integrity.count) }}
       </span>
       {% else %}
       <span class="integrity broken">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17H2.5z"></path><path d="M12 10v4M12 17.5v.5"></path></svg>
-        Целостность нарушена: запись {{ view.integrity.broken_at }} ({{ view.integrity.reason }})
+        {{ t("overview.integrity_broken", line=view.integrity.broken_at, reason=view.integrity.reason) }}
       </span>
       {% endif %}
     </div>
     {% set art = "&artifacts=1" if view.show_artifacts else "" %}
     <form class="filter" method="get" action="{{ project_url }}#ledger" role="search">
-      <label class="field inline">Тип события начинается с
+      <label class="field inline">{{ t("overview.filter") }}
         <input type="text" name="type" value="{{ type_prefix }}" placeholder="barrier." autocomplete="off">
       </label>
       {% if view.show_artifacts %}<input type="hidden" name="artifacts" value="1">{% endif %}
-      <button type="submit" class="btn btn-ghost btn-small">ПОКАЗАТЬ</button>
+      <button type="submit" class="btn btn-ghost btn-small">{{ t("overview.filter_submit") }}</button>
       <div class="filter-chips">
         {% for prefix in ["phase.", "barrier.", "artifact.", "llm.", "implement.", "zone."] %}
         <a class="chip{% if type_prefix == prefix %} chip-active{% endif %}" href="{{ project_url }}?type={{ prefix|urlencode }}{{ art }}#ledger">{{ prefix }}</a>
         {% endfor %}
-        {% if type_prefix %}<a class="chip" href="{{ project_url }}?type={{ art }}#ledger">все</a>{% endif %}
+        {% if type_prefix %}<a class="chip" href="{{ project_url }}?type={{ art }}#ledger">{{ t("overview.filter_all") }}</a>{% endif %}
         {% if not type_prefix.startswith("artifact.") %}
         {% if view.show_artifacts %}
-        <a class="chip chip-active" href="{{ project_url }}?type={{ type_prefix|urlencode }}#ledger">скрыть артефакты</a>
+        <a class="chip chip-active" href="{{ project_url }}?type={{ type_prefix|urlencode }}#ledger">{{ t("overview.hide_artifacts") }}</a>
         {% else %}
-        <a class="chip" href="{{ project_url }}?type={{ type_prefix|urlencode }}&amp;artifacts=1#ledger">показать артефакты</a>
+        <a class="chip" href="{{ project_url }}?type={{ type_prefix|urlencode }}&amp;artifacts=1#ledger">{{ t("overview.show_artifacts") }}</a>
         {% endif %}
         {% endif %}
       </div>
@@ -108,12 +108,12 @@
       <table class="data ledger">
         <thead>
           <tr>
-            <th scope="col">ВРЕМЯ</th>
-            <th scope="col">СОБЫТИЕ</th>
-            <th scope="col">СВОДКА</th>
-            <th scope="col">ЗОНА</th>
-            <th scope="col">КТО</th>
-            <th scope="col" class="num">ХЕШ</th>
+            <th scope="col">{{ t("overview.col.time") }}</th>
+            <th scope="col">{{ t("overview.col.event") }}</th>
+            <th scope="col">{{ t("overview.col.summary") }}</th>
+            <th scope="col">{{ t("overview.col.zone") }}</th>
+            <th scope="col">{{ t("overview.col.actor") }}</th>
+            <th scope="col" class="num">{{ t("overview.col.hash") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -127,13 +127,13 @@
             <td class="mono muted num">{{ row.hash|short }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="6" class="muted">Событий с таким типом нет.</td></tr>
+          <tr><td colspan="6" class="muted">{{ t("overview.no_events") }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {% if view.ledger_total > view.ledger_shown %}<p class="note">Показаны последние {{ view.ledger_shown }} из {{ view.ledger_total }}. <a class="link" href="{{ project_url }}?type={{ type_prefix|urlencode }}{{ art }}&amp;all=1#ledger">Показать все</a></p>{% endif %}
-    {% if view.hidden_artifacts %}<p class="note">Скрыто событий artifact.*: {{ view.hidden_artifacts }} (запись и чтение артефактов).</p>{% endif %}
+    {% if view.ledger_total > view.ledger_shown %}<p class="note">{{ t("overview.shown", shown=view.ledger_shown, total=view.ledger_total) }} <a class="link" href="{{ project_url }}?type={{ type_prefix|urlencode }}{{ art }}&amp;all=1#ledger">{{ t("overview.show_all") }}</a></p>{% endif %}
+    {% if view.hidden_artifacts %}<p class="note">{{ t("overview.hidden_artifacts", count=view.hidden_artifacts) }}</p>{% endif %}
   </div>
 </section>
 {% endblock %}

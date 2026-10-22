@@ -11,6 +11,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from reverseai.audit.similarity import SimilarityReport
+from reverseai.i18n import t
 from reverseai.parity.differential import ParityReport
 from reverseai.project import Project, risk_flags, slug
 from reverseai.provenance.ledger import LedgerVerification
@@ -53,13 +54,10 @@ def _sandbox_line(events: list) -> str:
     """From the latest `implement.start`: was the clone's code run in an isolated sandbox."""
     starts = [e for e in events if e.type == "implement.start"]
     if not starts:
-        return "- Реализация не запускалась."
+        return "- " + t("evidence.sandbox_never")
     if starts[-1].payload.get("sandbox_isolated"):
-        return "- Песочница: изолирована"
-    return (
-        "- Песочница: не изолирована (LocalSandbox: код клона выполнялся на машине оператора "
-        "без изоляции файловой системы и сети)"
-    )
+        return "- " + t("evidence.sandbox_isolated")
+    return "- " + t("evidence.sandbox_not_isolated")
 
 
 def _readme(
@@ -72,63 +70,67 @@ def _readme(
     models: list[dict],
     events: list,
 ) -> str:
+    """README.md of the pack, in the active language."""
     card = project.card
-    lines = [f"# Пакет доказательств: {card.product_name}", ""]
 
-    lines += ["## Целостность журнала", ""]
+    def heading(key: str) -> list[str]:
+        return ["", "## " + t(f"evidence.{key}"), ""]
+
+    lines = ["# " + t("evidence.title", product=card.product_name)]
+
+    lines += heading("ledger")
     lines.append(
-        "- Статус: цел (проверка хэш-цепочки пройдена)" if verification.ok
-        else "- Статус: НАРУШЕНА"
+        "- " + (t("evidence.ledger_ok") if verification.ok else t("evidence.ledger_broken"))
     )
-    lines.append(f"- Записей в журнале: {verification.count}")
+    lines.append("- " + t("evidence.ledger_count", count=verification.count))
     if not verification.ok:
-        lines.append(f"- Первая нарушенная запись: {verification.broken_at} ({verification.reason})")
+        lines.append("- " + t("evidence.ledger_first_broken", line=verification.broken_at,
+                              reason=verification.reason))
 
-    lines += ["", "## Одобрения", ""]
+    lines += heading("approvals")
     approvals = [p.get("approval") or {} for p in packages]
     if approvals:
         for a in approvals:
-            lines.append(
-                f"- {a.get('approver')} ({a.get('role')}), {a.get('approved_at')}, "
-                f"sha256 пакета (спецификация + сценарии): {a.get('package_sha256')}"
-            )
+            lines.append("- " + t(
+                "evidence.approval", approver=a.get("approver"), role=a.get("role"),
+                approved_at=a.get("approved_at"), sha=a.get("package_sha256"),
+            ))
     else:
-        lines.append("- Одобренных релизов нет.")
+        lines.append("- " + t("evidence.no_approvals"))
 
+    lines += heading("parity")
     lines += [
-        "",
-        "## Паритет",
-        "",
-        f"- Доля пройденных сценариев: {parity.ratio:.3f}",
-        f"- Доля критичных сценариев: {parity.critical_ratio:.3f}",
-        f"- Всего сценариев: {parity.total}",
-        f"- Нестабильных сценариев: {len(parity.unstable)}",
-        f"- Пропущено сценариев с записью (цель не песочница): {len(parity.skipped_unsafe)}",
-        f"- Расхождений по удержанным значениям: {parity.withheld_mismatches}",
-        "",
-        "## Сходство кода",
-        "",
-        f"- Максимальное сходство: {similarity.max_score:.4f} при пороге {similarity.threshold}",
-        f"- Сходство ниже порога: {'да' if similarity.ok else 'нет'}",
-        "",
-        "## Упоминания бренда",
-        "",
+        "- " + t("evidence.parity_ratio", ratio=parity.ratio),
+        "- " + t("evidence.parity_critical", ratio=parity.critical_ratio),
+        "- " + t("evidence.parity_total", count=parity.total),
+        "- " + t("evidence.parity_unstable", count=len(parity.unstable)),
+        "- " + t("evidence.parity_skipped", count=len(parity.skipped_unsafe)),
+        "- " + t("evidence.parity_withheld", count=parity.withheld_mismatches),
     ]
-    lines += [f"- {hit}" for hit in brand_hits] or ["- Упоминаний не найдено."]
+    lines += heading("similarity")
+    lines += [
+        "- " + t("evidence.similarity_max", score=similarity.max_score,
+                 threshold=similarity.threshold),
+        "- " + t("evidence.similarity_below",
+                 answer=t("common.yes") if similarity.ok else t("common.no")),
+    ]
+    lines += heading("brand")
+    lines += [f"- {hit}" for hit in brand_hits] or ["- " + t("evidence.brand_none")]
 
-    lines += ["", "## Песочница реализации", ""]
+    lines += heading("sandbox")
     lines.append(_sandbox_line(events))
 
-    lines += ["", "## Риски приёма", ""]
-    lines += [f"- {flag}" for flag in risk_flags(card)] or ["- Нет."]
+    lines += heading("risks")
+    lines += [f"- {flag}" for flag in risk_flags(card)] or ["- " + t("evidence.risks_none")]
 
-    lines += ["", "## Модели", ""]
+    lines += heading("models")
     lines += [
-        f"- {m['model']} ({m['provider']}): вызовов {m['calls']}, стоимость ${m['cost_usd']:.4f}"
+        "- " + t("evidence.model_row", model=m["model"], provider=m["provider"],
+                 count=m["calls"], cost=m["cost_usd"])
         for m in models
-    ] or ["- LLM-вызовов не было."]
+    ] or ["- " + t("evidence.models_none")]
 
-    lines += ["", "---", "", "Документ не является юридическим заключением.", ""]
+    lines += ["", "---", "", t("evidence.disclaimer"), ""]
     return "\n".join(lines)
 
 

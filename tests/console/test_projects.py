@@ -8,6 +8,15 @@ import pytest
 from reverseai.pipeline import Phase, load_state
 from reverseai.project import Project
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
+
 GOOD_FORM = {
     "name": "Acme Orders",
     "mode": "legacy",
@@ -52,7 +61,7 @@ def test_empty_projects_root(tmp_path) -> None:
 
     from reverseai.console import create_app
 
-    html = TestClient(create_app(tmp_path / "missing")).get("/").text
+    html = TestClient(create_app(tmp_path / "missing", lang="ru")).get("/").text
     assert "Проектов пока нет" in html
 
 
@@ -180,13 +189,13 @@ def test_overview_ledger_hides_artifact_events_by_default(console) -> None:
     assert rows and all(r.startswith("artifact.") for r in rows)
 
 
-def test_overview_ledger_rows_carry_a_payload_summary(console) -> None:
+def test_overview_ledger_rows_carry_a_payload_summary(console, approver_name) -> None:
     c = console("audited")
     html = c.get("/projects/console-demo", params={"all": "1", "artifacts": "1"}).text
     assert "СВОДКА" in html
     summaries = re.findall(r'<td class="event-summary[^"]*">([^<]*)</td>', html)
     assert "этап audit" in summaries
-    assert "Пётр Петров · оператор платформы" in summaries
+    assert f"{approver_name} · оператор платформы" in summaries
     assert any(s.startswith("analyst · ") and "$" in s for s in summaries)  # llm.call
     assert any(s.startswith("page:") for s in summaries)  # artifact.put: kind:name
     assert any("iteration=1" in s and "passed=" in s for s in summaries)  # counts

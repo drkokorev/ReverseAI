@@ -7,20 +7,15 @@ role recorded in `Approval`.
 
 from __future__ import annotations
 
-CONSOLE_ROLES: dict[str, str] = {
-    "operator": "Оператор платформы",
-    "customer_analyst": "Аналитик заказчика",
-}
+from reverseai.i18n import Labels, t
+
+CONSOLE_ROLES: Labels[str] = Labels("role", ["operator", "customer_analyst"])
 
 # D-010: console role values match `Approval.role` one to one.
 _APPROVAL_ROLES: dict[str, str] = {"operator": "operator", "customer_analyst": "customer_analyst"}
 
-_RECORDED_LABELS: dict[str, str] = {
-    "operator": "оператор платформы",
-    "customer_analyst": "аналитик заказчика",
-    # Approvals recorded before D-010 (when the barrier knew a lawyer role) stay readable.
-    "customer_lawyer": "юрист заказчика (до D-010)",
-}
+# Approvals recorded before D-010 (when the barrier knew a lawyer role) stay readable.
+_RECORDED_ROLES = ("operator", "customer_analyst", "customer_lawyer")
 
 
 def approval_role(role: str) -> str:
@@ -32,5 +27,5 @@ def approval_role(role: str) -> str:
 
 
 def role_label(recorded: str) -> str:
-    """Russian label of a role recorded in an approval (unknown roles are shown as is)."""
-    return _RECORDED_LABELS.get(recorded, recorded)
+    """Label of a role recorded in an approval (unknown roles are shown as is)."""
+    return t(f"role.recorded.{recorded}") if recorded in _RECORDED_ROLES else recorded

@@ -550,6 +550,7 @@ def _create(title: str) -> Scenario:
     ])
 
 
+@pytest.mark.usefixtures("lang_ru")  # checks the Russian copy
 def test_prepare_release_rerun_with_same_spec_and_new_scenarios(project) -> None:
     _seed_spec(project, [_create("Milk")])
     run_prepare_release(project)

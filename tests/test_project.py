@@ -161,6 +161,7 @@ def test_unknown_card_keys_are_rejected():
     assert ProjectCard.model_validate(good) == make_card()
 
 
+@pytest.mark.usefixtures("lang_ru")  # checks the Russian copy
 def test_project_lock_refuses_a_second_holder_at_once(tmp_path) -> None:
     from reverseai.project import ProjectBusy, project_lock
 

@@ -13,6 +13,7 @@ from reverseai.config import load_settings
 from reverseai.console.artifacts import ArtifactCache
 from reverseai.console.jobs import JobRunner
 from reverseai.console.registry import ProjectRegistry
+from reverseai.i18n import t
 from reverseai.llm.gateway import Gateway
 from reverseai.llm.providers import build_providers
 from reverseai.messages import PlainError
@@ -27,18 +28,14 @@ SandboxFactory = Callable[[Path], Sandbox]
 def production_gateway(project: Project) -> Gateway:
     """`pipeline.build_gateway` over the providers whose keys are in the environment.
 
-    Refuses with a Russian message when no provider key is configured, before any LLM call.
+    Refuses with a translated message when no provider key is configured, before any LLM call.
     """
     settings = load_settings()
     if not build_providers(settings, os.environ):
         names = sorted(
             {spec.api_key_env for spec in settings.providers.values() if spec.api_key_env}
         )
-        raise PlainError(
-            "не задан ключ ни одного провайдера LLM: задайте переменную окружения ("
-            + ", ".join(names)
-            + ") и перезапустите консоль"
-        )
+        raise PlainError(t("console.no_provider_key", names=", ".join(names)))
     return pipeline.build_gateway(project, settings)
 
 
@@ -56,6 +53,6 @@ class ConsoleContext:
     @property
     def operator_initials(self) -> str:
         if not self.operator:
-            return "ОП"
+            return t("console.operator_initials")
         parts = self.operator.split()
         return "".join(p[0] for p in parts[:2]).upper()

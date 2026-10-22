@@ -12,6 +12,8 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from starlette.requests import Request
 from starlette.responses import Response
 
+from reverseai.i18n import LANGS, get_language, t
+
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -50,16 +52,6 @@ def project_path(name: str) -> str:
     return "/projects/" + quote(name, safe="")
 
 
-def plural(n: int, one: str, few: str, many: str) -> str:
-    """Russian plural form for `n` («1 сценарий», «2 сценария», «5 сценариев»)."""
-    n = abs(int(n))
-    if n % 10 == 1 and n % 100 != 11:
-        return one
-    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
-        return few
-    return many
-
-
 def _environment() -> Environment:
     env = Environment(
         loader=FileSystemLoader(TEMPLATES_DIR),
@@ -69,7 +61,7 @@ def _environment() -> Environment:
         lstrip_blocks=True,
     )
     env.filters.update(hms=hms, stamp=stamp, short=short, project_path=project_path)
-    env.globals.update(plural=plural)
+    env.globals.update(t=t, langs=LANGS)
     return env
 
 
@@ -91,10 +83,21 @@ def render(
             "csrf_token": console.csrf_token,
             "operator": console.operator,
             "operator_initials": console.operator_initials,
+            "lang": get_language(),
+            "here": _here(request, context["project_url"]),
             **context,
         },
         status_code=status_code,
     )
+
+
+def _here(request: Request, project_url: str | None) -> str:
+    """Where the language switch returns to: this page, or for a form answer (a POST) the
+    project's overview or the projects list."""
+    if request.method != "GET":
+        return project_url or "/"
+    path = request.url.path
+    return f"{path}?{request.url.query}" if request.url.query else path
 
 
 def render_error(request: Request, status_code: int, title: str, message: str) -> Response:

@@ -3,9 +3,14 @@ import json
 import zipfile
 from pathlib import Path
 
+import pytest
+
 from reverseai.audit.evidence import build_evidence_pack
 from reverseai.audit.similarity import SimilarityReport
 from reverseai.parity.differential import ParityReport
+
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
 
 
 def _parity() -> ParityReport:

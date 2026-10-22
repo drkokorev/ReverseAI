@@ -1,6 +1,6 @@
 [project]
 name = "reverseai"
-version = "1.0.0"
+version = "1.1.0"
 description = "AI agents that rebuild a web application from its observable behavior: clean-room, with an audit trail"
 readme = "README.md"
 license = "MIT"

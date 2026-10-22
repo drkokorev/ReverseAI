@@ -86,7 +86,9 @@ The operator console (`reverseai console`) — minimal, dark and light themes, w
 <img src="docs/console-screenshots/phone-parity-dark.png" alt="Phone — parity" width="190">
 </p>
 
-All 23 screens in both themes: [`docs/console-screenshots/`](docs/console-screenshots/). The UI copy is in Russian.
+All 23 screens in both themes: [`docs/console-screenshots/`](docs/console-screenshots/) (the Russian interface: [`docs/console-screenshots/ru/`](docs/console-screenshots/ru/)).
+
+The interface — CLI output, console, job logs, release draft, evidence pack README — is English by default, with Russian available: `--lang ru` (or `REVERSEAI_LANG=ru`) for the CLI, the EN/RU switch in the console header (remembered in a cookie), or `reverseai console --lang ru` for the console's default.
 
 ## Clean-room guarantees, in code
 
@@ -115,6 +117,7 @@ Run the console on the projects from a benchmark run, or create a project from t
 
 ```bash
 uv run reverseai console --projects-root projects/   # http://127.0.0.1:8765
+uv run reverseai console --projects-root projects/ --lang ru   # Russian by default
 ```
 
 With real model keys, run the full pipeline on the bundled demo target and get parity, hidden-test, similarity and cost metrics:

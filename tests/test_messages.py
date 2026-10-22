@@ -7,6 +7,9 @@ from reverseai.messages import user_message, validation_summary
 from reverseai.pipeline import PipelineState
 from reverseai.project import ProjectCard
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
 
 def _error(model, raw: str) -> ValidationError:
     with pytest.raises(ValidationError) as info:

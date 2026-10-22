@@ -121,6 +121,26 @@ a.link { border-bottom: 1px solid var(--line); }
   justify-content: center;
 }
 
+.lang-switch {
+  display: flex;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+.lang-option {
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 13px; /* the extra px balances the trailing letter spacing */
+  color: var(--muted);
+}
+.lang-option + .lang-option { border-left: 1px solid var(--line); }
+.lang-option[aria-current="true"] { color: var(--text); background: var(--ghost); }
+
 .icon-button { background: var(--ghost); color: var(--text); cursor: pointer; padding: 0; }
 .avatar { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.12em; }
 
@@ -551,5 +571,8 @@ aside.panel { position: sticky; top: 24px; }
   .split { gap: 40px; }
   .nav { gap: 4px 20px; order: 3; flex-basis: 100%; }
   .header-inner { gap: 8px 16px; padding-top: 12px; padding-bottom: 4px; }
-  .header-tools { margin-left: auto; }
+  .header-tools { margin-left: auto; gap: 8px; }
+  .icon-button, .avatar, .lang-switch { height: 40px; }
+  .icon-button, .avatar { width: 40px; }
+  .lang-option { padding: 0 8px 0 9px; }
 }

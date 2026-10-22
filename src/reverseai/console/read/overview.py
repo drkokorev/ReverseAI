@@ -14,7 +14,8 @@ from reverseai.console.read.parity import (
     parity_report,
 )
 from reverseai.console.roles import role_label
-from reverseai.console.templating import parse_time, plural
+from reverseai.console.templating import parse_time
+from reverseai.i18n import Labels, t
 from reverseai.messages import PHASE_LABELS
 from reverseai.pipeline import PREREQUISITES, Phase, PipelineState, load_state
 from reverseai.project import Project, risk_flags
@@ -22,17 +23,7 @@ from reverseai.provenance.ledger import LedgerEvent, LedgerVerification
 from reverseai.spec.model import BehaviorSpec
 from reverseai.zones.store import Zone
 
-STAGE_NAMES: dict[Phase, str] = {
-    Phase.INTAKE: "ПРИЁМ",
-    Phase.OBSERVE: "НАБЛЮДЕНИЕ",
-    Phase.ORACLE: "ОРАКУЛ",
-    Phase.SPEC: "СПЕЦИФИКАЦИЯ",
-    Phase.PREPARE_RELEASE: "ПОДГОТОВКА",
-    Phase.RELEASE: "БАРЬЕР",
-    Phase.IMPLEMENT: "РЕАЛИЗАЦИЯ",
-    Phase.PARITY: "ПАРИТЕТ",
-    Phase.AUDIT: "АУДИТ",
-}
+STAGE_NAMES: Labels[Phase] = Labels("stage", list(Phase))
 STAGE_ZONES: dict[Phase, Zone] = {
     Phase.INTAKE: Zone.DIRTY,
     Phase.OBSERVE: Zone.DIRTY,
@@ -44,12 +35,7 @@ STAGE_ZONES: dict[Phase, Zone] = {
     Phase.PARITY: Zone.VERIFIER,
     Phase.AUDIT: Zone.VERIFIER,
 }
-ZONE_NOTES: dict[Zone, str] = {
-    Zone.DIRTY: "Видит оригинал",
-    Zone.RELEASED: "Пакет после барьера",
-    Zone.CLEAN: "Код клона",
-    Zone.VERIFIER: "Отчёты проверки",
-}
+ZONE_NOTES: Labels[Zone] = Labels("zone_note", list(Zone))
 LEDGER_LIMIT = 50  # rows shown by default; `?all=1` shows every event
 ARTIFACT_PREFIX = "artifact."  # hidden by default (`?artifacts=1` or this type prefix shows them)
 SUMMARY_LENGTH = 100
@@ -128,10 +114,6 @@ def _latest(events: list[LedgerEvent], type_: str) -> LedgerEvent | None:
     return next((e for e in reversed(events) if e.type == type_), None)
 
 
-def _count(n: int, one: str, few: str, many: str) -> str:
-    return f"{n} {plural(n, one, few, many)}"
-
-
 class _Details:
     """One-line detail per completed phase, from the ledger and (cached) artifacts."""
 
@@ -145,22 +127,22 @@ class _Details:
 
     def intake(self) -> str:
         flags = risk_flags(self.project.card)
-        return "Аттестация доступа; риски: " + (", ".join(flags) if flags else "не найдены")
+        return t("detail.intake", flags=", ".join(flags) if flags else t("detail.no_risks"))
 
     def observe(self) -> str:
         pages = self._json("pages") or []
         exchanges = self._json("exchanges") or []
         probes = self._json("probe_exchanges") or []
-        return (f"{_count(len(pages), 'страница', 'страницы', 'страниц')}, "
-                f"{_count(len(exchanges), 'обмен', 'обмена', 'обменов')}, "
-                f"{_count(len(probes), 'проба', 'пробы', 'проб')} API")
+        return ", ".join([t("detail.pages", count=len(pages)),
+                          t("detail.exchanges", count=len(exchanges)),
+                          t("detail.probes", count=len(probes))])
 
     def oracle(self) -> str:
         scenarios = self._json("scenarios") or []
-        text = _count(len(scenarios), "сценарий", "сценария", "сценариев")
+        text = t("detail.scenarios", count=len(scenarios))
         dropped = self._json("oracle_unstable")
         if dropped is not None:
-            text += f", отброшено: {len(dropped)}"
+            text += ", " + t("detail.dropped", count=len(dropped))
         return text
 
     def spec(self) -> str:
@@ -168,20 +150,20 @@ class _Details:
         if data is None:
             return ""
         spec = BehaviorSpec.model_validate(data)
-        return (f"{_count(len(spec.features), 'функция', 'функции', 'функций')}, "
-                f"{_count(len(spec.rules), 'правило', 'правила', 'правил')}")
+        return ", ".join([t("detail.features", count=len(spec.features)),
+                          t("detail.rules", count=len(spec.rules))])
 
     def prepare_release(self) -> str:
         event = _latest(self.events, "barrier.prepared")
         if event is None:
             return ""
-        return f"Находок санитайзера: {event.payload.get('findings', 0)}"
+        return t("detail.findings", count=int(event.payload.get("findings", 0)))
 
     def release(self) -> str:
         event = _latest(self.events, "barrier.approved")
         if event is None:
             return ""
-        return f"Пакет {str(event.payload.get('package_sha256', ''))[:6]}… подписан"
+        return t("detail.signed", sha=str(event.payload.get("package_sha256", ""))[:6])
 
     def implement(self) -> str:
         event = _latest(self.events, "implement.iteration")
@@ -189,23 +171,24 @@ class _Details:
         if event is None or done is None:
             return ""
         iterations = int(done.payload.get("iterations", 0))
-        return (f"{_count(iterations, 'итерация', 'итерации', 'итераций')}, "
-                f"{event.payload.get('passed')} из {event.payload.get('total')}")
+        return ", ".join([t("detail.iterations", count=iterations),
+                          t("common.of", part=event.payload.get("passed"),
+                            whole=event.payload.get("total"))])
 
     def parity(self) -> str:
         report = parity_report(self.cache, self.project, self.state)
         if report is None:
             return ""
         rounds = self.state.parity_rounds
-        return f"{report.ratio:.3f} за {_count(rounds, 'раунд', 'раунда', 'раундов')}"
+        return t("detail.parity", ratio=report.ratio, count=rounds)
 
     def audit(self) -> str:
         similarity = audited_similarity(self.project, self.state, self.events)
         if similarity is None:
             if audited_outside(self.project, self.state, self.events):
-                return "Пакет собран вне консоли"
+                return t("detail.audit_outside")
             return ""
-        return f"Сходство {float(similarity['max_score']):.3f}"
+        return t("detail.similarity", score=float(similarity["max_score"]))
 
     def __call__(self, phase: Phase) -> str:
         return getattr(self, phase.value)()
@@ -241,26 +224,26 @@ def stages(cache: ArtifactCache, project: Project, state: PipelineState,
 def kpis(cache: ArtifactCache, project: Project, state: PipelineState,
          events: list[LedgerEvent]) -> list[Kpi]:
     report = parity_report(cache, project, state)
+    parity_label, critical_label = t("kpi.parity"), t("kpi.critical")
     if report is not None:
-        parity = Kpi("parity", "ПАРИТЕТ", f"{report.ratio:.3f}",
-                     f"{report.passed} из {report.total} "
-                     f"{plural(report.total, 'сценария', 'сценариев', 'сценариев')}")
-        critical = Kpi("critical", "КРИТИЧНЫЕ", f"{report.critical_ratio:.3f}",
-                       f"{report.critical_passed} из {report.critical_total}")
+        parity = Kpi("parity", parity_label, f"{report.ratio:.3f}",
+                     t("kpi.scenarios_passed", passed=report.passed, count=report.total))
+        critical = Kpi("critical", critical_label, f"{report.critical_ratio:.3f}",
+                       t("common.of", part=report.critical_passed, whole=report.critical_total))
     else:
-        parity = Kpi("parity", "ПАРИТЕТ", "—", "Нет отчёта")
-        critical = Kpi("critical", "КРИТИЧНЫЕ", "—", "Нет отчёта")
+        parity = Kpi("parity", parity_label, "—", t("kpi.no_report"))
+        critical = Kpi("critical", critical_label, "—", t("kpi.no_report"))
     similarity = audited_similarity(project, state, events)
+    code_label = t("kpi.similarity")
     if similarity is not None:
-        code = Kpi("similarity", "СХОДСТВО КОДА", f"{float(similarity['max_score']):.3f}",
-                   f"порог {float(similarity['threshold']):.3f}")
+        code = Kpi("similarity", code_label, f"{float(similarity['max_score']):.3f}",
+                   t("kpi.threshold", threshold=float(similarity["threshold"])))
     elif audited_outside(project, state, events):
-        code = Kpi("similarity", "СХОДСТВО КОДА", "—", "Аудит проведён вне консоли")
+        code = Kpi("similarity", code_label, "—", t("kpi.audit_outside"))
     else:
-        code = Kpi("similarity", "СХОДСТВО КОДА", "—", "Аудит не проводился")
+        code = Kpi("similarity", code_label, "—", t("kpi.no_audit"))
     costs = summarize_costs(events)
-    llm = Kpi("llm", "LLM", f"${costs.total_usd:.4f}",
-              _count(costs.calls, "вызов", "вызова", "вызовов"))
+    llm = Kpi("llm", "LLM", f"${costs.total_usd:.4f}", t("kpi.calls", count=costs.calls))
     return [parity, critical, code, llm]
 
 
@@ -276,9 +259,9 @@ def event_summary(event: LedgerEvent) -> str:
     p: dict[str, Any] = event.payload
     parts: list[str] = []
     if "phase" in p:
-        parts.append(f"этап {p['phase']}")
+        parts.append(t("summary.phase", phase=p["phase"]))
     if isinstance(p.get("invalidated"), list):
-        parts.append("сброшены: " + ", ".join(str(x) for x in p["invalidated"]))
+        parts.append(t("summary.invalidated", phases=", ".join(str(x) for x in p["invalidated"])))
     if "approver" in p:
         parts.append(f"{p['approver']} · {role_label(str(p.get('role', '')))}")
     if "model" in p:

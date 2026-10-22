@@ -14,23 +14,22 @@ import json
 import zipfile
 from pathlib import Path
 
+from reverseai.i18n import Labels, t
 from reverseai.project import Project, slug
 from reverseai.provenance.ledger import LedgerEvent
 
 EVIDENCE_DIR = "evidence"
 
 # What each file of the pack holds (shown next to the file list).
-FILE_LABELS: dict[str, str] = {
-    "README.md": "сводка",
-    "ledger.jsonl": "журнал",
-    "ledger_verification.json": "целостность",
-    "release": "подписанный пакет",
-    "sanitize_report.json": "очистка",
-    "parity_report.json": "паритет",
-    "similarity_report.json": "сходство",
-    "models_used.json": "модели",
-    "zones_access.json": "доступ зон",
-}
+FILE_LABELS: Labels[str] = Labels(
+    "evidence_file",
+    [
+        "README.md", "ledger.jsonl", "ledger_verification.json", "release",
+        "sanitize_report.json", "parity_report.json", "similarity_report.json",
+        "models_used.json", "zones_access.json",
+    ],
+    name=lambda entry: entry.split(".")[0],
+)
 
 
 def evidence_dir(project: Project) -> Path:
@@ -45,10 +44,9 @@ def evidence_zip(project: Project) -> Path:
     return evidence_dir(project) / f"{_name(project)}.zip"
 
 
-OUTSIDE_CONSOLE = (
-    "пакет собран вне консоли (reverseai audit --out …): его здесь нет. Чтобы скачать пакет "
-    "из консоли, повторите аудит на странице проекта."
-)
+def outside_console() -> str:
+    """Why the pack cannot be downloaded: the latest audit wrote it elsewhere (one sentence)."""
+    return t("evidence_outside")
 
 
 def current_pack(project: Project, events: list[LedgerEvent]) -> Path | None:

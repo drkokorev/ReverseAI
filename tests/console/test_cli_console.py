@@ -1,8 +1,18 @@
 """`reverseai console`: loopback by default, a token for any other address."""
 
+import pytest
 from typer.testing import CliRunner
 
 from reverseai import cli
+
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
 
 runner = CliRunner()
 

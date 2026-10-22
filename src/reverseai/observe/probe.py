@@ -195,10 +195,10 @@ def probe_endpoints(
     Unreachable targets are recorded as `error="unreachable"`, never raised.
     """
     if not card.target_is_sandbox:
-        raise IntakeError("probing writes to the target and requires card.target_is_sandbox")
+        raise IntakeError("probe_needs_sandbox")
     host = (urlsplit(base_url).hostname or "").lower()
     if host not in {d.lower() for d in card.allowed_domains}:
-        raise IntakeError(f"probe host {host!r} is not in allowed_domains")
+        raise IntakeError("probe_host_not_allowed", host=host)
 
     own_client = client is None
     http = client or httpx.Client(trust_env=False, timeout=_TIMEOUT_S)

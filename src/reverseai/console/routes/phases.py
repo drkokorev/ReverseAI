@@ -12,6 +12,7 @@ from reverseai.console.jobs import Action, Job, JobBusy
 from reverseai.console.routes import console, require_csrf
 from reverseai.console.routes.overview import render_overview
 from reverseai.console.templating import project_path, render_error
+from reverseai.i18n import t
 from reverseai.messages import user_message
 from reverseai.project import ProjectBusy
 
@@ -22,7 +23,7 @@ ensure_free = actions.ensure_free
 def _busy(request: Request, name: str, job: Job) -> Response:
     return render_overview(
         request, name, status_code=409,
-        error=f"Для проекта уже выполняется задача «{job.label}». Дождитесь её завершения.",
+        error=t("phases.busy", label=job.label),
     )
 
 
@@ -42,16 +43,14 @@ def run_phase(
     ctx = console(request)
     project = ctx.projects.get(name)
     if action not in actions.RUNNABLE:
-        return render_error(request, 404, "Действие не найдено",
-                            f"Нет такого этапа: «{action}».")
+        return render_error(request, 404, t("errors.no_action.title"),
+                            t("errors.no_action.message", action=action))
     try:
         work: Action
         if action == "observe":
             work = actions.observe_job(
                 project,
-                max_pages=positive_int(
-                    max_pages, 50, "Число страниц должно быть целым числом от 1."
-                ),
+                max_pages=positive_int(max_pages, 50, t("phases.bad_max_pages")),
                 submit_forms=bool(submit_forms),
                 probe=bool(probe),
             )
@@ -64,9 +63,7 @@ def run_phase(
         elif action == "build":
             work = actions.build_job(
                 project, ctx.gateway_factory, ctx.sandbox_factory,
-                max_rounds=positive_int(
-                    max_rounds, 3, "Число раундов должно быть целым числом от 1."
-                ),
+                max_rounds=positive_int(max_rounds, 3, t("phases.bad_max_rounds")),
                 allow_unstable=bool(allow_unstable),
             )
         else:
@@ -79,7 +76,7 @@ def run_phase(
     try:
         ensure_free(project)  # another process (the CLI) holds the project
     except ProjectBusy as exc:
-        return render_overview(request, name, error=f"Ошибка: {user_message(exc)}",
+        return render_overview(request, name, error=t("cli.error", message=user_message(exc)),
                                status_code=409)
     try:
         ctx.jobs.start(name, action, actions.action_label(action), actions.locked(project, work))

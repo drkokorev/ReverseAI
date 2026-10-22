@@ -9,6 +9,14 @@ from reverseai.console.jobs import JobBusy, JobRunner
 from reverseai.messages import PlainError
 from reverseai.pipeline import Phase, PhaseOrderError
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
 
 def test_successful_job_records_log_times_and_status() -> None:
     runner = JobRunner()

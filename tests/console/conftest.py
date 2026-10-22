@@ -8,6 +8,7 @@ recorded exchanges follow tests/test_pipeline.py and tests/e2e.
 from __future__ import annotations
 
 import itertools
+import os
 import shutil
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -61,6 +62,10 @@ PROBES: list[tuple[str, str, Any]] = [
     ("GET", "/api/tasks/999999", None),
     ("PATCH", "/api/tasks/999999", {"done": True}),
 ]
+# Screenshots (tests/console/test_browser_smoke.py) are taken in CONSOLE_SCREENSHOTS_LANG; the
+# demo approver's name follows it, so an English set shows no Russian data. Tests use Russian.
+SCREENSHOTS_LANG = os.environ.get("CONSOLE_SCREENSHOTS_LANG", "ru")
+APPROVER = "Peter Petrov" if SCREENSHOTS_LANG == "en" else "Пётр Петров"
 STAGES = ("created", "observed", "specced", "prepared", "released", "audited")
 
 taskboard = load_target("taskboard")
@@ -157,7 +162,7 @@ def snapshots(tmp_path_factory, taskboard_server) -> dict[str, Path]:
     pipeline.run_prepare_release(project)
     snap("prepared")
     pipeline.run_release(project, Approval(
-        approver="Пётр Петров", role="operator", approved_at="2026-10-22T09:00:00+00:00",
+        approver=APPROVER, role="operator", approved_at="2026-10-22T09:00:00+00:00",
         package_sha256=pipeline.draft_sha256(project),
     ))
     snap("released")
@@ -218,10 +223,17 @@ class Harness:
 
 
 @pytest.fixture
-def console(stage_root) -> Callable[..., Harness]:
+def console_lang() -> str:
+    """The console's default language in a test; modules asserting Russian copy override it."""
+    return "en"
+
+
+@pytest.fixture
+def console(stage_root, console_lang) -> Callable[..., Harness]:
     """`console(stage, **options)`: a Harness on a fresh copy of that pipeline stage."""
 
     def make(stage: str, **options: Any) -> Harness:
+        options.setdefault("lang", console_lang)
         return Harness(stage_root(stage), **options)
 
     return make
@@ -230,6 +242,12 @@ def console(stage_root) -> Callable[..., Harness]:
 @pytest.fixture
 def project_name() -> str:
     return PROJECT
+
+
+@pytest.fixture
+def approver_name() -> str:
+    """Who approved the release of the snapshot project (released and later stages)."""
+    return APPROVER
 
 
 @pytest.fixture

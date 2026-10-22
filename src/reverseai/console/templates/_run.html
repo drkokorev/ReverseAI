@@ -5,46 +5,46 @@
   <div class="run-head">
     <span class="mono muted small">{{ stage.num }}</span>
     <span class="run-title">{{ title }}</span>
-    {% if stage.done %}<span class="chip">готово</span>{% endif %}
+    {% if stage.done %}<span class="chip">{{ t("run.done") }}</span>{% endif %}
   </div>
   <p class="run-note">{{ note }}</p>
   {{ caller() }}
-  <button type="submit" class="btn {% if stage.ready and not stage.done %}btn-primary{% else %}btn-ghost{% endif %} btn-small"{% if busy or not stage.ready %} disabled{% endif %}>{% if stage.done %}ПОВТОРИТЬ{% else %}ЗАПУСТИТЬ{% endif %}</button>
+  <button type="submit" class="btn {% if stage.ready and not stage.done %}btn-primary{% else %}btn-ghost{% endif %} btn-small"{% if busy or not stage.ready %} disabled{% endif %}>{% if stage.done %}{{ t("run.rerun") }}{% else %}{{ t("run.start") }}{% endif %}</button>
 </form>
 {% endmacro %}
 <section aria-labelledby="run-title" class="stack">
   <div class="section-head">
-    <h2 id="run-title" class="section-title">ЗАПУСК ЭТАПОВ</h2>
-    <span class="muted small">Повторный запуск этапа сбрасывает все следующие этапы.</span>
+    <h2 id="run-title" class="section-title">{{ t("run.title") }}</h2>
+    <span class="muted small">{{ t("run.invalidates") }}</span>
   </div>
   <div class="runs">
-    {% call run_form("observe", "observe", "НАБЛЮДЕНИЕ", "Обход цели в браузере; на песочнице — формы и зондирование API.") %}
-    <label class="field inline">Страниц, не больше
+    {% call run_form("observe", "observe", t("run.observe.title"), t("run.observe.note")) %}
+    <label class="field inline">{{ t("run.max_pages") }}
       <input type="number" name="max_pages" value="50" min="1" inputmode="numeric">
     </label>
     <label class="check{% if not card.target_is_sandbox %} is-disabled{% endif %}">
       <input type="checkbox" name="submit_forms"{% if not card.target_is_sandbox %} disabled{% endif %}>
-      <span>Отправлять формы</span>
+      <span>{{ t("run.submit_forms") }}</span>
     </label>
     <label class="check{% if not card.target_is_sandbox %} is-disabled{% endif %}">
       <input type="checkbox" name="probe"{% if not card.target_is_sandbox %} disabled{% endif %}>
-      <span>Зондировать API</span>
+      <span>{{ t("run.probe") }}</span>
     </label>
-    {% if not card.target_is_sandbox %}<p class="hint">Цель не песочница: только чтение.</p>{% endif %}
+    {% if not card.target_is_sandbox %}<p class="hint">{{ t("run.read_only") }}</p>{% endif %}
     {% endcall %}
-    {% call run_form("oracle", "oracle", "ОРАКУЛ", "Исполнимые сценарии поведения из наблюдённых обменов.") %}{% endcall %}
-    {% call run_form("spec", "spec", "СПЕЦИФИКАЦИЯ", "Аналитик и критик составляют поведенческую спецификацию (вызовы LLM).") %}{% endcall %}
-    {% call run_form("prepare-release", "prepare_release", "ПОДГОТОВКА ВЫПУСКА", "Санитайзер очищает спецификацию и сценарии; черновик ждёт согласования.") %}{% endcall %}
-    {% call run_form("build", "implement", "РЕАЛИЗАЦИЯ И ПАРИТЕТ", "Агенты пишут клон в чистой зоне; паритет сравнивает его с оригиналом.") %}
-    <label class="field inline">Раундов, не больше
+    {% call run_form("oracle", "oracle", t("run.oracle.title"), t("run.oracle.note")) %}{% endcall %}
+    {% call run_form("spec", "spec", t("run.spec.title"), t("run.spec.note")) %}{% endcall %}
+    {% call run_form("prepare-release", "prepare_release", t("run.prepare.title"), t("run.prepare.note")) %}{% endcall %}
+    {% call run_form("build", "implement", t("run.build.title"), t("run.build.note")) %}
+    <label class="field inline">{{ t("run.max_rounds") }}
       <input type="number" name="max_rounds" value="3" min="1" inputmode="numeric">
     </label>
     <label class="check">
       <input type="checkbox" name="allow_unstable">
-      <span>Разрешить нестабильный прогон</span>
+      <span>{{ t("run.allow_unstable") }}</span>
     </label>
-    <p class="hint">LocalSandbox не изолирует код клона от этой машины.</p>
+    <p class="hint">{{ t("run.local_sandbox") }}</p>
     {% endcall %}
-    {% call run_form("audit", "audit", "АУДИТ", "Сходство кода, упоминания бренда и пакет доказательств.") %}{% endcall %}
+    {% call run_form("audit", "audit", t("run.audit.title"), t("run.audit.note")) %}{% endcall %}
   </div>
 </section>

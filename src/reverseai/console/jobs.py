@@ -1,12 +1,14 @@
 """In-process background jobs: a thread per job, at most one active job per project.
 
-A job wraps one pipeline action. Its log holds short Russian lines written by the action (the
-same lines the CLI prints); failures become one Russian message, never a traceback. Every line
-and message is scrubbed of configured API keys before it is stored.
+A job wraps one pipeline action. Its log holds short lines written by the action (the same lines
+the CLI prints); failures become one message, never a traceback. The job runs in the language of
+the request that started it (its thread gets a copy of that context). Every line and message is
+scrubbed of configured API keys before it is stored.
 """
 
 from __future__ import annotations
 
+import contextvars
 import datetime as dt
 import logging
 import os
@@ -18,17 +20,13 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from reverseai.config import load_settings
+from reverseai.i18n import Labels, t
 from reverseai.messages import ENVIRONMENT_ERRORS, USER_ERRORS, user_message
 
 _LOG = logging.getLogger("reverseai.console")
 
 Status = Literal["running", "succeeded", "attention", "failed"]
-STATUS_LABELS: dict[str, str] = {
-    "running": "выполняется",
-    "succeeded": "завершено",
-    "attention": "требует внимания",
-    "failed": "ошибка",
-}
+STATUS_LABELS: Labels[str] = Labels("job_status", ["running", "succeeded", "attention", "failed"])
 JobLog = Callable[[str], None]
 # An action writes log lines and returns None (success) or a message that needs attention
 # (what the CLI reports with exit code 2: parity threshold missed, audit failed).
@@ -124,9 +122,10 @@ class JobRunner:
             job = Job(project=project, action=action, label=label,
                       max_log_lines=self._max_log_lines)
             self._jobs[project] = job
+        context = contextvars.copy_context()  # the request's language
         thread = threading.Thread(
-            target=self._run, args=(job, work), name=f"console-job-{project}-{action}",
-            daemon=True,
+            target=context.run, args=(self._run, job, work),
+            name=f"console-job-{project}-{action}", daemon=True,
         )
         thread.start()
         return job
@@ -153,15 +152,13 @@ class JobRunner:
             if message is not None:
                 status = "attention"
         except USER_ERRORS as exc:
-            status, message = "failed", f"Ошибка: {user_message(exc)}"
+            status, message = "failed", t("cli.error", message=user_message(exc))
         except ENVIRONMENT_ERRORS as exc:
-            status, message = "failed", f"Ошибка окружения: {exc}"
+            status, message = "failed", t("cli.environment_error", message=exc)
         except Exception as exc:  # noqa: BLE001 - shown as one line; details go to the server log
             _LOG.exception("console job %s/%s failed", job.project, job.action)
             status = "failed"
-            message = (
-                f"Внутренняя ошибка ({type(exc).__name__}). Подробности — в журнале сервера."
-            )
+            message = t("job.internal_error", error=type(exc).__name__)
         job.message = redact(message, secrets) if message is not None else None
         job.finished_at = dt.datetime.now(dt.UTC)
         job.status = status

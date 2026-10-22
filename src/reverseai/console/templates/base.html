@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,22 +15,27 @@
 <header class="header">
   <div class="header-inner">
     <a class="wordmark" href="/">REVERSEAI</a>
-    <nav class="nav" aria-label="Разделы">
-      <a href="/"{% if active == "projects" %} aria-current="page"{% endif %}>ПРОЕКТЫ</a>
+    <nav class="nav" aria-label="{{ t('nav.label') }}">
+      <a href="/"{% if active == "projects" %} aria-current="page"{% endif %}>{{ t("nav.projects") }}</a>
       {% if project_name %}
-      <a href="{{ project_url }}"{% if active == "overview" %} aria-current="page"{% endif %}>ОБЗОР</a>
-      <a href="{{ project_url }}/release"{% if active == "release" %} aria-current="page"{% endif %}>СОГЛАСОВАНИЕ</a>
-      <a href="{{ project_url }}/parity"{% if active == "parity" %} aria-current="page"{% endif %}>ПАРИТЕТ</a>
-      <a href="{{ project_url }}/costs"{% if active == "costs" %} aria-current="page"{% endif %}>РАСХОДЫ</a>
-      <a href="{{ project_url }}#ledger">ЖУРНАЛ</a>
+      <a href="{{ project_url }}"{% if active == "overview" %} aria-current="page"{% endif %}>{{ t("nav.overview") }}</a>
+      <a href="{{ project_url }}/release"{% if active == "release" %} aria-current="page"{% endif %}>{{ t("nav.release") }}</a>
+      <a href="{{ project_url }}/parity"{% if active == "parity" %} aria-current="page"{% endif %}>{{ t("nav.parity") }}</a>
+      <a href="{{ project_url }}/costs"{% if active == "costs" %} aria-current="page"{% endif %}>{{ t("nav.costs") }}</a>
+      <a href="{{ project_url }}#ledger">{{ t("nav.ledger") }}</a>
       {% endif %}
     </nav>
     <div class="header-tools">
-      <button type="button" class="icon-button" data-theme-toggle aria-label="Переключить тему" title="Переключить тему">
+      <nav class="lang-switch" aria-label="{{ t('nav.language') }}">
+        {% for code in langs %}
+        <a class="lang-option" href="/lang/{{ code }}?next={{ here|urlencode }}" hreflang="{{ code }}" lang="{{ code }}"{% if code == lang %} aria-current="true"{% endif %}>{{ code|upper }}</a>
+        {% endfor %}
+      </nav>
+      <button type="button" class="icon-button" data-theme-toggle aria-label="{{ t('nav.theme') }}" title="{{ t('nav.theme') }}">
         <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
         <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg>
       </button>
-      <div class="avatar" aria-label="Оператор{% if operator %}: {{ operator }}{% endif %}" title="{{ operator or 'Оператор' }}">{{ operator_initials }}</div>
+      <div class="avatar" aria-label="{{ t('nav.operator') }}{% if operator %}: {{ operator }}{% endif %}" title="{{ operator or t('nav.operator') }}">{{ operator_initials }}</div>
     </div>
   </div>
 </header>

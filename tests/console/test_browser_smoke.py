@@ -1,7 +1,9 @@
 """Browser smoke test: the console under uvicorn, every page in both themes, the release flow.
 
 Set CONSOLE_SCREENSHOTS_DIR to also save full-page screenshots of every page in both themes
-(that is how docs/console-screenshots/ is produced).
+(that is how docs/console-screenshots/ is produced), and CONSOLE_SCREENSHOTS_LANG (`en`, the
+default, or `ru`) for the console's language: the English set goes to docs/console-screenshots/,
+the Russian one to docs/console-screenshots/ru/.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ import pytest
 
 from reverseai.bench.server import serve_asgi
 from reverseai.console import create_app
+from reverseai.i18n import t
 from reverseai.sandbox import LocalSandbox
 
 pytestmark = pytest.mark.browser
@@ -39,6 +42,9 @@ SCREENSHOTS = os.environ.get("CONSOLE_SCREENSHOTS_DIR")
 # Optional: a dedicated directory for the demo projects while screenshots are taken (a neutral
 # path keeps pytest temp paths out of the published images). Its `projects/` child is recreated.
 DEMO_ROOT = os.environ.get("CONSOLE_DEMO_ROOT")
+LANG = os.environ.get("CONSOLE_SCREENSHOTS_LANG", "en")
+OPERATOR = {"en": "Daniil Kokorev", "ru": "Даниил Кокорев"}[LANG]
+ANALYST = {"en": "Anna Analyst", "ru": "Анна Аналитик"}[LANG]
 
 
 @pytest.fixture
@@ -55,7 +61,7 @@ def console_url(snapshots, scripted_gateway, tmp_path) -> Iterator[str]:
     card["name"] = "Console Flow"
     card_path.write_text(json.dumps(card, ensure_ascii=False, indent=2), encoding="utf-8")
     app = create_app(root, gateway_factory=scripted_gateway, sandbox_factory=LocalSandbox,
-                     operator="Даниил Кокорев")
+                     operator=OPERATOR, lang=LANG)
     with serve_asgi(app) as url:
         yield url
 
@@ -144,6 +150,27 @@ def test_theme_toggle_is_remembered(browser, console_url) -> None:
         context.close()
 
 
+def test_language_switch_is_remembered(browser, console_url) -> None:
+    other = "ru" if LANG == "en" else "en"
+    context, page, messages = _open(browser, "dark")
+    try:
+        page.goto(console_url + PAGES["parity"])
+        assert page.evaluate("document.documentElement.lang") == LANG
+        assert page.locator(f'.lang-switch a[hreflang="{LANG}"]').get_attribute(
+            "aria-current") == "true"
+        page.click(f'.lang-switch a[hreflang="{other}"]')
+        page.wait_for_load_state("networkidle")
+        assert page.url == console_url + PAGES["parity"]  # back on the same page
+        assert page.evaluate("document.documentElement.lang") == other
+        assert t("parity_page.title", lang=other) in page.locator("h1").inner_text()
+        page.goto(console_url + "/")  # the choice is kept in a cookie
+        assert page.evaluate("document.documentElement.lang") == other
+        assert t("projects.title", lang=other) in page.locator("h1").inner_text()
+        _no_csp_violations(messages)
+    finally:
+        context.close()
+
+
 def test_release_tabs_switch_without_reload(browser, console_url) -> None:
     context, page, _ = _open(browser, "light")
     try:
@@ -164,19 +191,19 @@ def test_prepare_release_approve_and_download_evidence(browser, console_url, tmp
         page.goto(console_url + f"/projects/{FLOW}")
         page.click(f'form[action="/projects/{FLOW}/run/prepare-release"] button[type="submit"]')
         page.wait_for_selector('#job[data-job-status="succeeded"]', timeout=60_000)
-        assert "SHA-256 пакета" in page.locator(".job-log").inner_text()
+        assert t("release.package_sha", lang=LANG, sha="") in page.locator(".job-log").inner_text()
 
         # review and approve
         page.goto(console_url + f"/projects/{FLOW}/release")
         approve = page.locator("[data-confirm-submit]")
         assert approve.is_disabled()  # until the confirmation box is checked
-        page.fill('input[name="approver"]', "Анна Аналитик")
+        page.fill('input[name="approver"]', ANALYST)
         page.select_option('select[name="role"]', "customer_analyst")
         page.check('input[name="confirm"]')
         assert approve.is_enabled()
         approve.click()
-        page.wait_for_selector("text=ВЫПУЩЕНО")
-        assert "Анна Аналитик" in page.content()
+        page.wait_for_selector("text=" + t("release_page.released", lang=LANG))
+        assert ANALYST in page.content()
         _shot(page, "release-approved-dark")
 
         # download the evidence pack of the audited project

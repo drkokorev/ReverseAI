@@ -3,12 +3,12 @@
 {% block content %}
 <section class="hero">
   <div class="hero-text">
-    <div class="eyebrow">ОШИБКА · {{ status }}</div>
+    <div class="eyebrow">{{ t("error_page.eyebrow") }} · {{ status }}</div>
     <h1 class="display display-sm">{{ title }}</h1>
     <p class="lede">{{ message }}</p>
   </div>
   <div class="actions">
-    <a class="btn btn-ghost" href="/">К ПРОЕКТАМ</a>
+    <a class="btn btn-ghost" href="/">{{ t("error_page.back") }}</a>
   </div>
 </section>
 {% endblock %}

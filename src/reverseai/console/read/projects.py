@@ -6,13 +6,11 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from reverseai.console.registry import ProjectInvalid, ProjectRegistry
+from reverseai.i18n import Labels
 from reverseai.pipeline import Phase, load_state
 from reverseai.project import Mode, Project
 
-MODE_LABELS: dict[Mode, str] = {
-    Mode.LEGACY: "LEGACY",
-    Mode.IMPORT_SUBSTITUTION: "ИМПОРТОЗАМЕЩЕНИЕ",
-}
+MODE_LABELS: Labels[Mode] = Labels("mode", list(Mode))
 
 
 @dataclass

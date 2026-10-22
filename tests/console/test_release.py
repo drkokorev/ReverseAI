@@ -11,6 +11,15 @@ from reverseai.console.roles import approval_role
 from reverseai.pipeline import Phase, load_state
 from reverseai.zones.store import Zone
 
+# These tests check the Russian copy (English: test_i18n.py and the *_en test modules).
+pytestmark = pytest.mark.usefixtures("lang_ru")
+
+
+@pytest.fixture
+def console_lang() -> str:
+    return "ru"
+
+
 URL = "/projects/console-demo/release"
 
 

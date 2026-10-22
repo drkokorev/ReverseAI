@@ -23,6 +23,7 @@ from reverseai.barrier.sanitizer import (
     sanitize_spec,
     withheld_expectations,
 )
+from reverseai.i18n import has, t
 from reverseai.observe.har import parse_har
 from reverseai.oracle.model import Scenario
 from reverseai.project import Project
@@ -33,17 +34,22 @@ from reverseai.zones.store import ArtifactRef, Zone
 _ACTOR = "barrier"
 _RAW_KINDS = ("expression", "document")
 _PAGE_FIELDS = ("title", "text_excerpt")
-_FINDING_KIND_RU = {
-    "code": "код",
-    "verbatim": "дословный текст",
-    "brand": "бренд",
-    "url": "домен",
-    "body_warning": "предупреждение (тело запроса)",
-}
 
 
 class ReleaseError(Exception):
-    """The draft may not cross the barrier (approval mismatch or the draft is not clean)."""
+    """The draft may not cross the barrier (approval mismatch or the draft is not clean).
+
+    `key` names the refusal (catalog entry `release_error.<key>`); the message is in the active
+    language, `reason` (what the ledger records) is always English. Any other text is taken
+    as the message itself.
+    """
+
+    def __init__(self, key: str, **params: object) -> None:
+        entry = f"release_error.{key}"
+        message = t(entry, **params) if has(entry) else key
+        super().__init__(message)
+        self.key = key
+        self.reason = t(entry, lang="en", **params) if has(entry) else key
 
 
 class PreparedRelease(BaseModel):
@@ -186,8 +192,7 @@ def _sanitize(
 def _check_product_name(project: Project, spec: BehaviorSpec) -> None:
     if spec.product_name != project.card.product_name:
         raise ReleaseError(
-            f"spec product name {spec.product_name!r} is not the project's "
-            f"{project.card.product_name!r}"
+            "product_name", spec=repr(spec.product_name), card=repr(project.card.product_name)
         )
 
 
@@ -196,49 +201,52 @@ def _json(value: Any) -> str:
 
 
 def _scenario_lines(scenario: Scenario) -> list[str]:
-    critical = " (критичный)" if scenario.critical else ""
+    critical = f" ({t('release_md.critical')})" if scenario.critical else ""
     lines = [f"### {scenario.id}: {scenario.title}{critical}", ""]
     for n, scenario_step in enumerate(scenario.steps, start=1):
         step, expect = scenario_step.step, scenario_step.expect
-        body = f" тело: `{_json(step.json_body)}`" if step.json_body is not None else ""
-        lines.append(f"{n}. `{step.method} {step.path}`{body} → статус {expect.status}")
+        body = ""
+        if step.json_body is not None:
+            body = f" {t('release_md.body')}: `{_json(step.json_body)}`"
+        status = t("release_md.status", status=expect.status)
+        lines.append(f"{n}. `{step.method} {step.path}`{body} → {status}")
         if expect.json_shape:
-            lines.append(f"   - форма: `{_json(expect.json_shape)}`")
+            lines.append(f"   - {t('release_md.shape')}: `{_json(expect.json_shape)}`")
         for pointer, value in expect.json_equals.items():
             lines.append(f"   - `{pointer}` = {_json(value)}")
         if step.save:
-            lines.append(f"   - сохранить: `{_json(step.save)}`")
+            lines.append(f"   - {t('release_md.save')}: `{_json(step.save)}`")
     lines.append("")
     return lines
 
 
 def _review_markdown(draft: PreparedRelease, withheld: list[tuple[str, int, str]]) -> str:
     """What the approver signs: the spec, every released scenario, what was withheld."""
-    lines = [render_markdown(draft.spec), "## Сценарии", ""]
+    lines = [render_markdown(draft.spec), "## " + t("release_md.scenarios"), ""]
     for scenario in draft.scenarios:
         lines += _scenario_lines(scenario)
     if not draft.scenarios:
         lines += ["—", ""]
-    lines += ["## Удалённые ожидаемые значения", ""]
-    lines += [f"- {sid}, шаг {step + 1}: `{pointer}`" for sid, step, pointer in withheld]
+    lines += ["## " + t("release_md.withheld"), ""]
+    lines += [
+        "- " + t("release_md.withheld_row", scenario=sid, step=step + 1, pointer=pointer)
+        for sid, step, pointer in withheld
+    ]
     lines += [""] if withheld else ["—", ""]
     warnings = [f for f in draft.report.findings if f.kind in WARNING_KINDS]
     if warnings:
-        lines += ["## Предупреждения", ""]
-        lines.append(
-            "Строки тел запросов совпадают с кодом или текстом оригинала. Сценарий отправляет "
-            "их как есть: проверьте, что это данные, а не выражение оригинала."
-        )
+        lines += ["## " + t("release_md.warnings"), ""]
+        lines.append(t("release.body_warning_note"))
         lines.append("")
         lines += [f"- {f.location}: {f.excerpt!r}" for f in warnings]
         lines.append("")
-    lines += ["## Отчёт санитайзера", ""]
-    lines.append(f"SHA-256 пакета (спецификация + сценарии): `{draft.package_sha256}`")
-    lines.append(f"SHA-256 спецификации: `{draft.spec_sha256}`")
-    lines.append(f"Сценариев: {len(draft.scenarios)}")
+    lines += ["## " + t("release_md.report"), ""]
+    lines.append(t("release_md.package_sha", sha=draft.package_sha256))
+    lines.append(t("release_md.spec_sha", sha=draft.spec_sha256))
+    lines.append(t("release_md.scenario_count", count=len(draft.scenarios)))
     lines.append("")
     for f in draft.report.findings:
-        lines.append(f"- {_FINDING_KIND_RU[f.kind]} — {f.location}: {f.excerpt!r}")
+        lines.append(f"- {t('finding.' + f.kind)} — {f.location}: {f.excerpt!r}")
     if not draft.report.findings:
         lines.append("—")
     return "\n".join(lines) + "\n"
@@ -291,34 +299,32 @@ def _load_draft(project: Project, draft_ref: str) -> PreparedRelease:
     try:
         ref = project.store.ref(draft_ref, Zone.DIRTY)
     except KeyError:
-        raise ReleaseError(f"no dirty-zone artifact {draft_ref}") from None
+        raise ReleaseError("no_artifact", ref=draft_ref) from None
     try:
         project.store.ref(draft_ref, Zone.DIRTY, kind="release_draft")
     except KeyError:
-        raise ReleaseError(
-            f"artifact {draft_ref} is a {ref.kind!r}, not a release_draft"
-        ) from None
+        raise ReleaseError("not_a_draft", ref=draft_ref, kind=repr(ref.kind)) from None
     try:
         return PreparedRelease.model_validate(project.store.get_json(draft_ref, Zone.DIRTY))
     except ValueError as exc:  # integrity failure, bad JSON/UTF-8, schema validation
-        raise ReleaseError(f"release draft {draft_ref} is malformed: {exc}") from exc
+        raise ReleaseError("malformed", ref=draft_ref, detail=exc) from exc
 
 
 def _check(project: Project, draft: PreparedRelease, approval: Approval) -> None:
     if approval.package_sha256 != draft.package_sha256:
-        raise ReleaseError("approval does not match the draft package hash")
+        raise ReleaseError("approval_mismatch")
     if package_sha256(draft.spec, draft.scenarios) != draft.package_sha256:
-        raise ReleaseError("draft spec and scenarios do not match the recorded package hash")
+        raise ReleaseError("package_mismatch")
     if draft.spec.sha256() != draft.spec_sha256:
-        raise ReleaseError("draft spec does not match its recorded hash")
+        raise ReleaseError("spec_mismatch")
     _check_product_name(project, draft.spec)
     _, scenarios, findings = _sanitize(project, draft.spec, draft.scenarios)
     findings = blocking(findings)  # body warnings were shown to the approver; they never block
     if findings:
         where = ", ".join(sorted({f"{f.kind}@{f.location}" for f in findings}))
-        raise ReleaseError(f"draft is not clean on re-check: {where}")
+        raise ReleaseError("not_clean", where=where)
     if scenarios != draft.scenarios:
-        raise ReleaseError("draft scenarios carry values the sanitizer would drop")
+        raise ReleaseError("would_drop")
 
 
 def release(project: Project, draft_ref: str, approval: Approval) -> ArtifactRef:
@@ -334,7 +340,7 @@ def release(project: Project, draft_ref: str, approval: Approval) -> ArtifactRef
             {
                 "draft_ref": draft_ref,
                 "package_sha256": approval.package_sha256,
-                "reason": str(exc),
+                "reason": exc.reason,
             },
         )
         raise
