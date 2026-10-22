@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>{% block title %}ReverseAI{% endblock %} — ReverseAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="/static/console.css">
+<script src="/static/console.js"></script>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <a class="wordmark" href="/">REVERSEAI</a>
+    <nav class="nav" aria-label="Разделы">
+      <a href="/"{% if active == "projects" %} aria-current="page"{% endif %}>ПРОЕКТЫ</a>
+      {% if project_name %}
+      <a href="{{ project_url }}"{% if active == "overview" %} aria-current="page"{% endif %}>ОБЗОР</a>
+      <a href="{{ project_url }}/release"{% if active == "release" %} aria-current="page"{% endif %}>СОГЛАСОВАНИЕ</a>
+      <a href="{{ project_url }}/parity"{% if active == "parity" %} aria-current="page"{% endif %}>ПАРИТЕТ</a>
+      <a href="{{ project_url }}/costs"{% if active == "costs" %} aria-current="page"{% endif %}>РАСХОДЫ</a>
+      <a href="{{ project_url }}#ledger">ЖУРНАЛ</a>
+      {% endif %}
+    </nav>
+    <div class="header-tools">
+      <button type="button" class="icon-button" data-theme-toggle aria-label="Переключить тему" title="Переключить тему">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg>
+      </button>
+      <div class="avatar" aria-label="Оператор{% if operator %}: {{ operator }}{% endif %}" title="{{ operator or 'Оператор' }}">{{ operator_initials }}</div>
+    </div>
+  </div>
+</header>
+<main class="page {% block page_class %}{% endblock %}">
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

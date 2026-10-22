@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Согласование · {{ card.name }}{% endblock %}
+{% block page_class %}tight{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <div class="eyebrow">{{ card.product_name|upper }} · ЭТАП 06 · БАРЬЕР</div>
+    <h1 class="display display-sm">ПАКЕТ v{{ view.draft.spec.version if view.draft else 1 }}</h1>
+    <p class="lede">Всё, что увидят агенты-реализаторы: спецификация и сценарии после очистки. Подпись привязана к хешу пакета — после неё содержимое изменить нельзя.</p>
+  </div>
+</section>
+
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+{% if not view.draft %}
+<p class="empty">Черновик выпуска ещё не подготовлен. Запустите этап «Подготовка выпуска» на <a class="link" href="{{ project_url }}">странице проекта</a>.</p>
+{% else %}
+{% set draft = view.draft %}
+{% set spec = draft.spec %}
+<div class="split align-start">
+  <section class="split-main stack-lg" aria-label="Содержимое пакета">
+    <div class="tabs" role="tablist" data-tabs>
+      {% for key, label in tabs.items() %}
+      <a class="tab" href="?tab={{ key }}" role="tab" aria-selected="{{ 'true' if key == tab else 'false' }}" aria-controls="tab-{{ key }}" data-tab="{{ key }}">{{ label }}{% if key == "scenarios" %} · {{ draft.scenarios|length }}{% endif %}</a>
+      {% endfor %}
+    </div>
+
+    <div class="tab-panel" id="tab-spec"{% if tab != "spec" %} hidden{% endif %} role="tabpanel">
+      <div class="stack-lg">
+        <p class="prose">{{ spec.summary or "—" }}</p>
+
+        <div class="rows">
+          <div class="rows-title">ФУНКЦИИ · {{ spec.features|length }}</div>
+          {% for item in spec.features %}
+          <div class="item-row">
+            <span class="item-id mono muted">{{ item.id }}</span>
+            <div class="item-main">
+              <span class="item-title">{{ item.title }}</span>
+              <span class="item-desc">{{ item.description }}</span>
+            </div>
+            <span class="mono small confidence-{{ item.confidence }}">{{ item.confidence }}</span>
+          </div>
+          {% else %}<p class="muted">—</p>{% endfor %}
+        </div>
+
+        <div class="rows">
+          <div class="rows-title">ПРАВИЛА · {{ spec.rules|length }}</div>
+          {% for item in spec.rules %}
+          <div class="item-row">
+            <span class="item-id mono muted">{{ item.id }}</span>
+            <div class="item-main">
+              <span class="item-title">{{ item.title }}</span>
+              <span class="item-desc">{{ item.description }}</span>
+            </div>
+            <span class="mono small confidence-{{ item.confidence }}">{{ item.confidence }}</span>
+          </div>
+          {% else %}<p class="muted">—</p>{% endfor %}
+        </div>
+
+        <div class="rows">
+          <div class="rows-title">СУЩНОСТИ · {{ spec.entities|length }}</div>
+          {% for entity in spec.entities %}
+          <div class="item-row">
+            <span class="item-id mono">{{ entity.name }}</span>
+            <div class="item-main">
+              <span class="item-desc">{{ entity.description }}</span>
+              <span class="mono small">{% for field, kind in entity.fields.items() %}{{ field }}: {{ kind }}{% if not loop.last %} · {% endif %}{% endfor %}</span>
+            </div>
+          </div>
+          {% else %}<p class="muted">—</p>{% endfor %}
+        </div>
+
+        <div class="rows">
+          <div class="rows-title">API · {{ spec.api|length }}</div>
+          {% for contract in spec.api %}
+          <div class="item-row">
+            <span class="item-id mono">{{ contract.method }}</span>
+            <div class="item-main">
+              <span class="item-title mono">{{ contract.path }}</span>
+              {% if contract.description %}<span class="item-desc">{{ contract.description }}</span>{% endif %}
+              {% if contract.request_schema %}<span class="mono small muted">запрос: {{ compact(contract.request_schema) }}</span>{% endif %}
+              {% for status in contract.responses|sort %}<span class="mono small muted">ответ {{ status }}: {{ compact(contract.responses[status]) }}</span>{% endfor %}
+            </div>
+          </div>
+          {% else %}<p class="muted">—</p>{% endfor %}
+        </div>
+
+        <div class="rows">
+          <div class="rows-title">ПРОБЕЛЫ · {{ spec.gaps|length }}</div>
+          {% for gap in spec.gaps %}
+          <div class="item-row"><span class="item-desc">{{ gap }}</span></div>
+          {% else %}<p class="muted">—</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-scenarios"{% if tab != "scenarios" %} hidden{% endif %} role="tabpanel">
+      <div class="table-wrap">
+        <table class="data scenarios">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">СЦЕНАРИЙ</th>
+              <th scope="col">ЗАПРОСЫ И ОЖИДАНИЯ</th>
+              <th scope="col">ТИП</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scenario in draft.scenarios %}
+            <tr>
+              <td class="mono muted">{{ scenario.id }}</td>
+              <td>{{ scenario.title }}</td>
+              <td>
+                <ol class="steps">
+                  {% for item in scenario.steps %}
+                  <li>
+                    <span class="mono">{{ item.step.method }} {{ item.step.path }}</span>
+                    {% if item.step.json_body is not none %}<span class="mono muted small">тело {{ compact(item.step.json_body) }}</span>{% endif %}
+                    <span class="mono small">→ {{ item.expect.status }}{% if item.expect.json_shape %} · форма{% endif %}</span>
+                    {% for pointer, value in item.expect.json_equals.items() %}<span class="mono small muted">{{ pointer }} = {{ compact(value) }}</span>{% endfor %}
+                    {% if item.step.save %}<span class="mono small muted">сохранить {{ compact(item.step.save) }}</span>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ol>
+              </td>
+              <td class="{{ 'strong' if scenario.critical else 'muted' }}">{{ "критичный" if scenario.critical else "обычный" }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="muted">Сценариев нет.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-cleanup"{% if tab != "cleanup" %} hidden{% endif %} role="tabpanel">
+      <div class="stack-lg">
+        <div class="stats">
+          <div class="stat"><span class="kpi-label">НАХОДКИ</span><span class="stat-value" data-stat="findings">{{ view.findings|length }}</span></div>
+          <div class="stat"><span class="kpi-label">ПРЕДУПРЕЖДЕНИЯ</span><span class="stat-value" data-stat="warnings">{{ view.warnings|length }}</span></div>
+          <div class="stat"><span class="kpi-label">УДЕРЖАНО</span><span class="stat-value" data-stat="withheld">{{ view.withheld|length }}</span></div>
+          <div class="stat"><span class="kpi-label">ОТБРОШЕНО ОРАКУЛОМ</span><span class="stat-value" data-stat="dropped">{{ view.dropped|length if view.dropped is not none else "—" }}</span></div>
+        </div>
+        <p class="note">Санитайзер сверяет каждый текст пакета со словарём оригинала: код, страницы, ответы сервера. Совпадения от 8 слов, бренд и домены вырезаются; длинные и прозаические ожидаемые значения не передаются.</p>
+
+        <div class="rows">
+          <div class="rows-title">НАХОДКИ САНИТАЙЗЕРА</div>
+          {% for finding in view.findings %}
+          <div class="item-row">
+            <span class="item-id">{{ finding_kinds.get(finding.kind, finding.kind) }}</span>
+            <div class="item-main">
+              <span class="mono small">{{ finding.location }}</span>
+              {% if finding.excerpt %}<span class="item-desc">«{{ finding.excerpt }}»</span>{% endif %}
+            </div>
+          </div>
+          {% else %}<p class="muted">Санитайзер ничего не нашёл.</p>{% endfor %}
+        </div>
+
+        {% if view.warnings %}
+        <div class="rows">
+          <div class="rows-title warn">ПРЕДУПРЕЖДЕНИЯ · {{ view.warnings|length }}</div>
+          <p class="note">Строки тел запросов совпадают с кодом или текстом оригинала. Сценарий отправляет их как есть, выпуск они не блокируют: проверьте, что это данные, а не выражение оригинала.</p>
+          {% for finding in view.warnings %}
+          <div class="item-row">
+            <span class="item-id warn">{{ finding_kinds.get(finding.kind, finding.kind) }}</span>
+            <div class="item-main">
+              <span class="mono small">{{ finding.location }}</span>
+              {% if finding.excerpt %}<span class="item-desc">«{{ finding.excerpt }}»</span>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="rows">
+          <div class="rows-title">УДЕРЖАННЫЕ ОЖИДАЕМЫЕ ЗНАЧЕНИЯ</div>
+          {% for item in view.withheld %}
+          <div class="item-row"><span class="item-id mono">{{ item.scenario }}</span><span class="mono small">шаг {{ item.step }} · {{ item.pointer }}</span></div>
+          {% else %}<p class="muted">Ничего не удержано.</p>{% endfor %}
+        </div>
+
+        <div class="rows">
+          <div class="rows-title">ОТБРОШЕНО ОРАКУЛОМ</div>
+          {% if view.dropped is none %}
+          <p class="muted">Сценарии не перепроверялись на сброшенном оригинале.</p>
+          {% else %}
+          {% for sid in view.dropped %}<div class="item-row"><span class="item-id mono">{{ sid }}</span><span class="item-desc">не воспроизводится на чистом оригинале</span></div>
+          {% else %}<p class="muted">Ничего не отброшено.</p>{% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="split-side panel stack" aria-label="Подпись">
+    <div class="kpi-label">ПОДПИСЬ ПАКЕТА</div>
+    <div class="stack-sm">
+      <span class="muted small">SHA-256 пакета (спецификация + сценарии)</span>
+      <code class="hash">{{ draft.package_sha256 }}</code>
+    </div>
+    <div class="stack-sm">
+      <span class="muted small">Черновик для чтения</span>
+      <code class="path">{{ view.markdown_path }}</code>
+    </div>
+
+    {% if view.released %}
+    {% set approval = view.approval or {} %}
+    <div class="stack">
+      <div class="released">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"></path></svg>
+        ВЫПУЩЕНО
+      </div>
+      <span class="mono muted small">{{ approval.get("approved_at")|stamp }} · {{ role_label(approval.get("role", "")) }}</span>
+      <span>{{ approval.get("approver", "") }}</span>
+      <span class="muted small">Пакет передан в чистую зону. События barrier.approved и barrier.release записаны в журнал.</span>
+      <a class="btn btn-ghost" href="{{ project_url }}/parity">К ПАРИТЕТУ</a>
+    </div>
+    {% else %}
+    <form class="stack" method="post" action="{{ project_url }}/release/approve" data-confirm>
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <input type="hidden" name="sha" value="{{ draft.package_sha256 }}">
+      <label class="field">Подписант
+        <input type="text" name="approver" value="{{ approver }}" required autocomplete="name">
+      </label>
+      <label class="field">Роль
+        <select name="role">
+          {% for value, label in roles.items() %}
+          <option value="{{ value }}"{% if value == role %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="check">
+        <input type="checkbox" name="confirm">
+        <span>Я просмотрел пакет: в нём нет кода, текстов и бренда оригинала.</span>
+      </label>
+      <button type="submit" class="btn btn-primary"{% if busy %} disabled{% endif %} data-confirm-submit>СОГЛАСОВАТЬ И ВЫПУСТИТЬ</button>
+      <span class="muted small">Юрист заказчика получает итоговый пакет доказательств после аудита.</span>
+    </form>
+    {% endif %}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

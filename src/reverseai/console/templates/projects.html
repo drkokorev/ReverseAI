@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Проекты{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <div class="eyebrow">КАТАЛОГ · <span class="mono">{{ root }}</span></div>
+    <h1 class="display">ПРОЕКТЫ</h1>
+    <p class="lede">Каждый проект проходит девять этапов: от приёма и наблюдения за целью до выпуска пакета через барьер, реализации, паритета и аудита.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary" href="/projects/new">НОВЫЙ ПРОЕКТ</a>
+  </div>
+</section>
+
+<section aria-labelledby="list-title" class="stack">
+  <h2 id="list-title" class="section-title">ВСЕ ПРОЕКТЫ · {{ rows|length }}</h2>
+  {% if rows %}
+  <div class="table-wrap">
+    <table class="data projects">
+      <thead>
+        <tr>
+          <th scope="col">ПРОЕКТ</th>
+          <th scope="col">РЕЖИМ</th>
+          <th scope="col">ЦЕЛЬ</th>
+          <th scope="col">ЭТАПЫ</th>
+          <th scope="col" class="num">АКТИВНОСТЬ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% if row.problem %}
+        <tr class="is-broken">
+          <td>
+            <span class="project-link">{{ row.title }}</span>
+            <div class="warn small">{{ row.problem }}</div>
+          </td>
+          <td colspan="4" class="muted small">Проект не открывается: исправьте файлы в каталоге проекта.</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td>
+            <a class="project-link" href="{{ row.name|project_path }}">{{ row.title }}</a>
+            <div class="muted small">клон: {{ row.product }}</div>
+          </td>
+          <td class="caps">{{ row.mode }}</td>
+          <td class="mono">{{ row.host }}{% if row.sandbox %} <span class="chip">песочница</span>{% endif %}</td>
+          <td>
+            <div class="progress" aria-label="Завершено этапов: {{ row.done_count }} из 9">
+              {% for done in row.done %}<span class="progress-step{% if done %} done{% endif %}"></span>{% endfor %}
+            </div>
+            <div class="mono muted small">{{ row.done_count }} / 9</div>
+          </td>
+          <td class="mono muted num">{{ row.last_activity|stamp }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">Проектов пока нет. Создайте первый: карточка проекта, аттестация законного доступа и разрешённые домены.</p>
+  {% endif %}
+</section>
+{% endblock %}

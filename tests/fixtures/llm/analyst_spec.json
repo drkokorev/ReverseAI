@@ -1,0 +1,315 @@
+{
+  "summary": "Tasklet is a small shared task board. People add short titled tasks with a priority, tick them off, delete them and see counters. A JSON API under /api backs a single-page interface.",
+  "features": [
+    {
+      "id": "F-001",
+      "title": "Task list page",
+      "description": "A single page, served at the site root, shows a form for adding a task, a one-line summary of counters, and the list of all tasks. Each task row has a checkbox reflecting completion, the title, a badge with the priority, and a control to remove the task. Completed tasks are visually marked as done. After every change the page reloads the task list and the counters from the JSON API.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/stats"
+        }
+      ]
+    },
+    {
+      "id": "F-002",
+      "title": "Create task",
+      "description": "POST /api/tasks creates a task from a JSON object with a text field `title` and an optional field `priority`. On success the response status is 201 and the body is the created task object. The new task starts as not done, gets the next integer id and the current UTC time as `created_at`.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    },
+    {
+      "id": "F-003",
+      "title": "List tasks",
+      "description": "GET /api/tasks answers 200 with a JSON array of all existing task objects, ordered by ascending id. An empty board yields an empty array. The list is not filtered or paginated and accepts no query parameters that change the result.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks"
+        }
+      ]
+    },
+    {
+      "id": "F-004",
+      "title": "Get one task",
+      "description": "GET /api/tasks/{id} answers 200 with the task object when a task with that integer id exists, otherwise 404 with error code `not_found`.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks/{id}"
+        }
+      ]
+    },
+    {
+      "id": "F-005",
+      "title": "Mark task done or open",
+      "description": "PATCH /api/tasks/{id} with a JSON body `{\"done\": <boolean>}` sets the completion flag and answers 200 with the full updated task object. The flag may be set in both directions. Only `done` is read from the body; any other keys are ignored and the other attributes of the task stay unchanged.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "PATCH /api/tasks/{id}"
+        },
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    },
+    {
+      "id": "F-006",
+      "title": "Delete task",
+      "description": "DELETE /api/tasks/{id} removes the task and answers 204 with an empty body. Deleting a missing task answers 404 with error code `not_found`. Ids of deleted tasks are never handed out again.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "DELETE /api/tasks/{id}"
+        },
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    },
+    {
+      "id": "F-007",
+      "title": "Counters",
+      "description": "GET /api/stats answers 200 with a JSON object holding three integers: `total` (all tasks), `done` (tasks with done = true) and `open` (total minus done). On an empty board all three are 0. The page shows the three numbers as a single summary line.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/stats"
+        },
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "name": "Task",
+      "description": "One item on the shared board.",
+      "fields": {
+        "id": "integer, assigned automatically from 1, unique, never reused",
+        "title": "string, trimmed, 1 to 200 characters",
+        "priority": "string, one of low, normal, high; default normal",
+        "done": "boolean, false when created",
+        "created_at": "string, UTC ISO 8601 with whole seconds and trailing Z"
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "R-001",
+      "title": "Error body shape",
+      "description": "Every error answer from the JSON API is a JSON object with exactly one key, `error`, whose value is a lowercase snake_case machine code. The codes in use are: `invalid_body`, `title_required`, `title_too_long`, `invalid_priority`, `duplicate`, `invalid_done`, `not_found`. The codes are part of the contract; human-readable text is produced by the page, not by the API.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks/{id}"
+        }
+      ]
+    },
+    {
+      "id": "R-002",
+      "title": "Request body must be a JSON object",
+      "description": "For POST /api/tasks and PATCH /api/tasks/{id}, a body that is not valid JSON, or is valid JSON but not an object (array, string, number, null), is rejected with status 422 and code `invalid_body`.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "PATCH /api/tasks/{id}"
+        }
+      ]
+    },
+    {
+      "id": "R-003",
+      "title": "Title normalization and presence",
+      "description": "The title is taken from the `title` key and has leading and trailing whitespace removed before any other check. If `title` is missing, is not a string, or is empty after trimming, the answer is 422 with code `title_required`. The stored title is the trimmed value; inner whitespace and letter case are kept as sent.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        }
+      ]
+    },
+    {
+      "id": "R-004",
+      "title": "Title length limit",
+      "description": "The trimmed title may be at most 200 characters. A title of exactly 200 characters is accepted; 201 or more is rejected with status 422 and code `title_too_long`. Length is counted in characters of the trimmed text.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        }
+      ]
+    },
+    {
+      "id": "R-005",
+      "title": "Priority values and default",
+      "description": "Allowed priorities are the strings `low`, `normal` and `high`, matched exactly and case-sensitively. When `priority` is absent the task gets `normal`. A present value that is not a string or is not one of the three allowed values is rejected with status 422 and code `invalid_priority`; an explicit null counts as present and invalid.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    },
+    {
+      "id": "R-006",
+      "title": "Validation order on create",
+      "description": "Checks on POST /api/tasks run in this order and the first failure decides the answer: body is an object (`invalid_body`), title present (`title_required`), title length (`title_too_long`), priority (`invalid_priority`), duplicate check (`duplicate`). Nothing is stored when any check fails, and a failed attempt does not consume an id.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        }
+      ]
+    },
+    {
+      "id": "R-007",
+      "title": "No duplicate open titles",
+      "description": "A new task is rejected with status 409 and code `duplicate` when an existing task that is NOT done has the same title, compared after trimming and case-insensitively (`Buy milk` equals `buy MILK`). Tasks that are done never block a new task with the same title, so a title can be reused after its earlier task is completed. The comparison considers only the title, not the priority.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    },
+    {
+      "id": "R-008",
+      "title": "Identifiers",
+      "description": "Task ids are integers assigned by a single increasing counter that starts at 1 on an empty board and grows by 1 with every successfully created task. Ids are not reused after deletion. In paths, an id that is not an integer or does not belong to an existing task is treated as a missing task and answers 404 with code `not_found`.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks/{id}"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "DELETE /api/tasks/{id}"
+        }
+      ]
+    },
+    {
+      "id": "R-009",
+      "title": "Timestamps",
+      "description": "`created_at` is the creation time in UTC as an ISO 8601 string with whole-second precision and a trailing `Z`, for example `2026-03-14T09:26:53Z`. It never changes afterwards, also not when the task is marked done.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks"
+        }
+      ]
+    },
+    {
+      "id": "R-010",
+      "title": "Update validation order",
+      "description": "On PATCH /api/tasks/{id} the existence of the task is checked first (404 `not_found`), then the body shape (422 `invalid_body`), then the `done` value. `done` must be a real boolean; absent, null, numbers and strings such as \"true\" are rejected with status 422 and code `invalid_done`.",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "PATCH /api/tasks/{id}"
+        }
+      ]
+    },
+    {
+      "id": "R-011",
+      "title": "Task object shape",
+      "description": "Every task object, in create, list, get and update answers, has exactly these keys: `id` (integer), `title` (string), `priority` (string, one of the allowed values), `done` (boolean) and `created_at` (string).",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "GET /api/tasks/{id}"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "POST /api/tasks"
+        }
+      ]
+    },
+    {
+      "id": "R-012",
+      "title": "State is shared and in memory",
+      "description": "All visitors see the same single board. State lives only in the running process: restarting the product empties the board and restarts ids at 1. There is no authentication and no per-user data.",
+      "confidence": "low",
+      "evidence": [
+        {
+          "kind": "page",
+          "ref": "http://127.0.0.1:8000/"
+        }
+      ]
+    }
+  ],
+  "gaps": [
+    "Behavior under concurrent requests from several clients is not observed.",
+    "Maximum number of tasks and any rate limiting are not observed.",
+    "Handling of non-ASCII titles and of case folding beyond basic letters is not verified.",
+    "Responses to unsupported HTTP methods on known paths are not observed.",
+    "Whether the page keeps state in the browser between visits is not observed."
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "issues": [
+    "The specification does not say whether the position of a task in the list changes when it is marked done.",
+    "No statement about what happens to the counters after a task is deleted."
+  ]
+}

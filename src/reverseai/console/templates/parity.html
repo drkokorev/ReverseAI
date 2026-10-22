@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Паритет · {{ card.name }}{% endblock %}
+{% block content %}
+{% set report = view.report %}
+<section class="hero">
+  <div class="hero-text">
+    <div class="eyebrow">{{ card.product_name|upper }} · ЭТАПЫ 08–09</div>
+    <h1 class="display display-sm">ПАРИТЕТ</h1>
+    <p class="lede">Одни и те же сценарии запущены на оригинале и на клоне. Сравнение идёт по поведению и данным, не по внешнему виду.</p>
+  </div>
+  {% if report %}
+  <div class="verdict{% if not view.met %} is-warning{% endif %}">
+    <span class="verdict-dot"></span>
+    <span>{% if view.met %}ПОРОГ ПРОЙДЕН{% else %}ПОРОГ НЕ ДОСТИГНУТ{% endif %}</span>
+  </div>
+  {% endif %}
+</section>
+
+{% if not report %}
+<p class="empty">Паритет ещё не проверялся. Запустите «Реализацию и паритет» на <a class="link" href="{{ project_url }}">странице проекта</a> после выпуска пакета.</p>
+{% else %}
+<section aria-label="Итоги" class="kpis">
+  <div class="kpi" data-kpi="ratio">
+    <span class="kpi-label">ПАРИТЕТ</span>
+    <span class="kpi-value">{{ "%.3f"|format(report.ratio) }}</span>
+    <span class="kpi-sub">{{ report.passed }} из {{ report.total }} · порог {{ "%.2f"|format(view.parity_threshold) }}</span>
+  </div>
+  <div class="kpi" data-kpi="critical">
+    <span class="kpi-label">КРИТИЧНЫЕ</span>
+    <span class="kpi-value">{{ "%.3f"|format(report.critical_ratio) }}</span>
+    <span class="kpi-sub">{{ report.critical_passed }} из {{ report.critical_total }} · порог {{ "%.2f"|format(view.critical_threshold) }}</span>
+  </div>
+  <div class="kpi" data-kpi="unstable">
+    <span class="kpi-label">НЕСТАБИЛЬНЫЕ</span>
+    <span class="kpi-value">{{ report.unstable|length }}</span>
+    <span class="kpi-sub">не более {{ "%d"|format(view.unstable_limit * 100) }}%, критичные — ни одного</span>
+  </div>
+  <div class="kpi" data-kpi="rounds">
+    <span class="kpi-label">РАУНДЫ</span>
+    <span class="kpi-value">{{ view.rounds }}</span>
+    <span class="kpi-sub">реализация → паритет</span>
+  </div>
+</section>
+
+<section class="stack">
+  <h2 class="section-title">СЦЕНАРИИ · {{ report.results|length }}</h2>
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">СЦЕНАРИЙ</th>
+          <th scope="col">ОРИГИНАЛ</th>
+          <th scope="col">КЛОН</th>
+          <th scope="col">РАСХОЖДЕНИЯ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.results %}
+        <tr data-scenario="{{ row.id }}">
+          <td class="mono muted">{{ row.id }}</td>
+          <td>{{ row.title }}{% if row.critical %} <span class="chip">критичный</span>{% endif %}</td>
+          <td class="mono{% if not row.original_ok %} warn{% endif %}">{% if row.original_ok %}PASS{% else %}НЕСТАБ.{% endif %}</td>
+          <td class="mono{% if row.original_ok and not row.clone_ok %} warn{% endif %}">{% if not row.original_ok %}—{% elif row.clone_ok %}PASS{% else %}FAIL{% endif %}</td>
+          <td class="mono small muted">{% for f in row.failures %}шаг {{ f.step + 1 }}: {{ f.kind }}{% if f.pointer %} {{ f.pointer }}{% endif %}{% if not loop.last %}; {% endif %}{% else %}—{% endfor %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Расхождений по удержанным значениям: {{ report.withheld_mismatches }}{% if report.skipped_unsafe %} · пропущено сценариев с записью (цель не песочница): {{ report.skipped_unsafe|length }}{% endif %}{% if report.unstable %} · нестабильны на оригинале: {{ report.unstable|join(", ") }}{% endif %}</p>
+</section>
+{% endif %}
+
+<div class="split align-start">
+  <section class="split-side stack" aria-labelledby="similarity-title">
+    <h2 id="similarity-title" class="section-title">СХОДСТВО КОДА</h2>
+    {% if view.similarity %}
+    {% set score = view.similarity.max_score|float %}
+    {% set threshold = view.similarity.threshold|float %}
+    <div class="figure">
+      <span class="kpi-value">{{ "%.3f"|format(score) }}</span>
+      <span class="muted">из допустимых {{ "%.3f"|format(threshold) }}</span>
+    </div>
+    <svg class="meter" role="img" aria-label="Сходство {{ '%.3f'|format(score) }} при пороге {{ '%.3f'|format(threshold) }}" viewBox="0 0 100 24" preserveAspectRatio="none" width="100%" height="24">
+      <rect class="meter-track" x="0" y="11" width="100" height="1"></rect>
+      <rect class="meter-fill" x="0" y="9" width="{{ '%.2f'|format(view.meter_percent) }}" height="5"></rect>
+      <rect class="meter-threshold" x="50" y="0" width="0.4" height="24"></rect>
+    </svg>
+    <div class="meter-scale mono muted small"><span>0</span><span>порог {{ "%.2f"|format(threshold) }}</span><span>{{ "%.2f"|format(threshold * 2) }}</span></div>
+    <p class="note">Доля фрагментов кода клона, совпадающих с кодом оригинала (JS/CSS), окно 8 токенов.</p>
+    {% if view.brand_hits %}
+    <div class="rows">
+      <div class="rows-title warn">УПОМИНАНИЯ БРЕНДА · {{ view.brand_hits|length }}</div>
+      {% for hit in view.brand_hits %}<div class="item-row"><span class="mono small">{{ hit }}</span></div>{% endfor %}
+    </div>
+    {% else %}
+    <p class="note">Упоминаний бренда не найдено.</p>
+    {% endif %}
+    {% elif view.outside %}
+    <p class="empty">Аудит проведён вне консоли: его отчёт о сходстве — в пакете доказательств, собранном командой <span class="mono">reverseai audit</span>.</p>
+    {% else %}
+    <p class="empty">Аудит ещё не проводился.</p>
+    {% endif %}
+  </section>
+
+  <section class="split-main panel stack" aria-labelledby="evidence-title">
+    <div class="section-head align-start">
+      <div class="stack-sm">
+        <h2 id="evidence-title" class="section-title">ПАКЕТ ДОКАЗАТЕЛЬСТВ</h2>
+        {% if view.evidence %}
+        <span class="evidence-name">{{ view.evidence.zip_name }}</span>
+        {% if view.evidence.sha256 %}<code class="hash muted">sha256 {{ view.evidence.sha256 }}</code>{% endif %}
+        {% endif %}
+      </div>
+      {% if view.evidence %}
+      <a class="btn btn-primary" href="{{ project_url }}/evidence.zip" download>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>
+        СКАЧАТЬ
+      </a>
+      {% endif %}
+    </div>
+    {% if view.evidence %}
+    <ul class="files">
+      {% for name, label in view.evidence.files %}
+      <li><span class="mono">{{ name }}</span><span class="muted">{{ label }}</span></li>
+      {% endfor %}
+    </ul>
+    {% elif view.outside %}
+    <p class="empty">{{ outside_message[:1]|upper }}{{ outside_message[1:] }}</p>
+    {% else %}
+    <p class="empty">Пакет доказательств ещё не собран: запустите аудит.</p>
+    {% endif %}
+    {% if view.sandbox_isolated is not none and not view.sandbox_isolated %}
+    <div class="warning">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17H2.5z"></path><path d="M12 10v4M12 17.5v.5"></path></svg>
+      <span>Песочница реализации не изолирована (LocalSandbox): код клона выполнялся на машине оператора. В пакете это указано явно.</span>
+    </div>
+    {% endif %}
+    <span class="muted small">Пакет передаётся юристу заказчика. Документ не является юридическим заключением.</span>
+  </section>
+</div>
+{% endblock %}

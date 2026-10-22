@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Расходы · {{ card.name }}{% endblock %}
+{% macro cost_table(title, rows, head) %}
+<section class="stack">
+  <h2 class="section-title">{{ title }}</h2>
+  <div class="table-wrap">
+    <table class="data costs">
+      <thead>
+        <tr>
+          <th scope="col">{{ head }}</th>
+          <th scope="col" class="num">ВЫЗОВЫ</th>
+          <th scope="col" class="num">USD</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr><td class="mono">{{ row.key }}</td><td class="mono num">{{ row.calls }}</td><td class="mono num">{{ "%.4f"|format(row.cost_usd) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endmacro %}
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <div class="eyebrow">{{ card.product_name|upper }} · ЖУРНАЛ · llm.call</div>
+    <h1 class="display display-sm">РАСХОДЫ</h1>
+    <p class="lede">Все вызовы моделей идут через шлюз и записываются в журнал происхождения. Суммы совпадают с командой <span class="mono">reverseai costs</span>.</p>
+  </div>
+</section>
+
+<section aria-label="Итоги" class="kpis">
+  <div class="kpi">
+    <span class="kpi-label">ВЫЗОВЫ LLM</span>
+    <span class="kpi-value" data-kpi="calls">{{ costs.calls }}</span>
+    <span class="kpi-sub">по журналу проекта</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">СТОИМОСТЬ</span>
+    <span class="kpi-value">${{ "%.4f"|format(costs.total_usd) }}</span>
+    <span class="kpi-sub">USD по ценам из конфигурации</span>
+  </div>
+</section>
+
+{% if costs.calls %}
+<div class="split align-start">
+  <div class="split-side">{{ cost_table("ПО РОЛЯМ", costs.by_role, "РОЛЬ") }}</div>
+  <div class="split-main">{{ cost_table("ПО МОДЕЛЯМ", costs.by_model, "МОДЕЛЬ (ПРОВАЙДЕР)") }}</div>
+</div>
+{% else %}
+<p class="empty">Вызовов LLM не было.</p>
+{% endif %}
+{% endblock %}

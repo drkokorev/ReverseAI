@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Новый проект{% endblock %}
+{% block page_class %}tight{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-text">
+    <div class="eyebrow">ЭТАП 01 · ПРИЁМ</div>
+    <h1 class="display display-sm">НОВЫЙ ПРОЕКТ</h1>
+    <p class="lede">Карточка проекта проходит юридический фильтр: законный доступ к цели, хост цели среди разрешённых доменов, название клона без бренда оригинала.</p>
+  </div>
+</section>
+
+<form class="form" method="post" action="/projects" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+  <fieldset class="form-section">
+    <legend class="section-title">ПРОЕКТ</legend>
+    <div class="form-grid">
+      <label class="field">Название проекта
+        <input type="text" name="name" value="{{ form.name }}" required autocomplete="off">
+      </label>
+      <label class="field">Режим
+        <select name="mode">
+          {% for value, label in modes.items() %}
+          <option value="{{ value }}"{% if form.mode == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="field">Название продукта клона
+        <input type="text" name="product_name" value="{{ form.product_name }}" required autocomplete="off">
+        <span class="hint">Не должно повторять бренд оригинала.</span>
+      </label>
+      <label class="field">Бренд оригинала
+        <textarea name="brand_terms" rows="3">{{ form.brand_terms }}</textarea>
+        <span class="hint">Через запятую или с новой строки. Вырезается из всего, что пересекает барьер.</span>
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend class="section-title">ЦЕЛЬ</legend>
+    <div class="form-grid">
+      <label class="field">Адрес цели
+        <input type="url" name="target_base_url" value="{{ form.target_base_url }}" placeholder="https://app.example.com/" required>
+      </label>
+      <label class="field">Разрешённые домены
+        <textarea name="allowed_domains" rows="3">{{ form.allowed_domains }}</textarea>
+        <span class="hint">Хост цели должен быть в списке. Через запятую или с новой строки.</span>
+      </label>
+    </div>
+    <label class="check">
+      <input type="checkbox" name="target_is_sandbox"{% if form.target_is_sandbox %} checked{% endif %}>
+      <span>Цель — песочница: разрешены отправка форм, зондирование API и сценарии с записью.</span>
+    </label>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend class="section-title">ПОЛИТИКА ДАННЫХ</legend>
+    <div class="checks-row" role="group" aria-label="Юрисдикции провайдеров моделей">
+      {% for value, label in jurisdictions.items() %}
+      <label class="check">
+        <input type="checkbox" name="jurisdictions" value="{{ value }}"{% if value in form.jurisdictions %} checked{% endif %}>
+        <span>{{ label }} <span class="mono muted">{{ value }}</span></span>
+      </label>
+      {% endfor %}
+    </div>
+    <span class="hint">Модели вызываются только у провайдеров из выбранных юрисдикций.</span>
+    <div class="form-grid">
+      <label class="field">Юрисдикция проекта
+        <input type="text" name="jurisdiction" value="{{ form.jurisdiction }}" autocomplete="off">
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="form-section">
+    <legend class="section-title">АТТЕСТАЦИЯ</legend>
+    <div class="form-grid">
+      <label class="field">Основание доступа
+        <input type="text" name="basis" value="{{ form.basis }}" placeholder="Договор, лицензия, собственная система" autocomplete="off">
+      </label>
+      <label class="field">Кто подписал
+        <input type="text" name="signed_by" value="{{ form.signed_by }}" autocomplete="name">
+      </label>
+      <label class="field">Когда подписано
+        <input type="text" name="signed_at" value="{{ form.signed_at }}" placeholder="2026-10-22T10:00:00Z" autocomplete="off">
+        <span class="hint">ISO 8601. Пусто — текущее время.</span>
+      </label>
+    </div>
+    <label class="check">
+      <input type="checkbox" name="lawful_access"{% if form.lawful_access %} checked{% endif %}>
+      <span>Подтверждаю законный доступ к цели и право изучать её поведение.</span>
+    </label>
+  </fieldset>
+
+  <div class="actions start">
+    <button type="submit" class="btn btn-primary">СОЗДАТЬ ПРОЕКТ</button>
+    <a class="btn btn-ghost" href="/">ОТМЕНА</a>
+  </div>
+</form>
+{% endblock %}

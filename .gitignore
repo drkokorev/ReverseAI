@@ -1,0 +1,13 @@
+.DS_Store
+.env
+.env.*
+__pycache__/
+node_modules/
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+bench_runs/
+.claude/
+.superpowers/

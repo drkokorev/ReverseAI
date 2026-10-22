@@ -1,0 +1,7 @@
+1. Keep tasks in an in-memory dict keyed by integer id; issue ids from a counter that never reuses a value.
+2. POST /api/tasks: parse a JSON object, validate title (required, trimmed, at most 200 characters), then priority (low/normal/high, default normal), then reject an open task with the same title (409); answer 201 with the task.
+3. GET /api/tasks lists tasks by ascending id; GET /api/tasks/{id} answers 404 `not_found` for unknown ids.
+4. PATCH /api/tasks/{id} reads only the boolean `done`; DELETE answers 204 with no body.
+5. GET /api/stats returns total, done and open counters.
+6. Every error body is a single `error` key with a machine code.
+7. Serve a single page at / with the add form, counters and the task list.

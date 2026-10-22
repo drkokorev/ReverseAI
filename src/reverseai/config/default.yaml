@@ -1,0 +1,80 @@
+# Default providers, models and role routing.
+# Prices are USD per 1M tokens (report, LLM section).
+# Model ids marked "# verify id" are unconfirmed and must be checked before live use.
+providers:
+  anthropic:
+    kind: anthropic
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+    jurisdiction: us
+  openai:
+    kind: openai
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    jurisdiction: us
+  deepseek:
+    kind: anthropic
+    base_url: https://api.deepseek.com/anthropic
+    api_key_env: DEEPSEEK_API_KEY
+    jurisdiction: cn
+  zai:
+    kind: anthropic
+    base_url: https://api.z.ai/api/anthropic
+    api_key_env: ZAI_API_KEY
+    jurisdiction: cn
+
+models:
+  claude-opus-5-5:        # verify id
+    provider: anthropic
+    input_per_mtok: 4
+    output_per_mtok: 20
+    cached_input_per_mtok: 0.20
+  claude-sonnet-5-5:      # verify id
+    provider: anthropic
+    input_per_mtok: 2
+    output_per_mtok: 10
+    cached_input_per_mtok: 0.10
+  claude-haiku-5-5:       # verify id
+    provider: anthropic
+    input_per_mtok: 0.10
+    output_per_mtok: 0.50
+    cached_input_per_mtok: 0.01
+  gpt-6.1-sol:            # verify id
+    provider: openai
+    input_per_mtok: 2
+    output_per_mtok: 10
+    cached_input_per_mtok: 0.10
+  gpt-6-luna:             # verify id
+    provider: openai
+    input_per_mtok: 0.10
+    output_per_mtok: 0.50
+    cached_input_per_mtok: 0.01
+  deepseek-v4-pro:        # verify id; peak prices
+    provider: deepseek
+    input_per_mtok: 1.32
+    output_per_mtok: 3.96
+    cached_input_per_mtok: 0.044
+  deepseek-v4.1-flash:    # verify id
+    provider: deepseek
+    input_per_mtok: 0.30
+    output_per_mtok: 1.20
+    cached_input_per_mtok: 0.006
+  glm-5.3:                # verify id
+    provider: zai
+    input_per_mtok: 1.40
+    output_per_mtok: 4.40
+    cached_input_per_mtok: 0.26
+
+roles:
+  planner:
+    candidates: [claude-opus-5-5, gpt-6.1-sol]
+  judge:
+    candidates: [claude-opus-5-5, gpt-6.1-sol]
+  spec_critic:
+    candidates: [claude-opus-5-5, gpt-6.1-sol]
+  analyst:
+    candidates: [claude-sonnet-5-5, gpt-6.1-sol, deepseek-v4-pro, glm-5.3]
+  executor:
+    candidates: [claude-sonnet-5-5, gpt-6.1-sol, deepseek-v4-pro, glm-5.3]
+  bulk:
+    candidates: [claude-haiku-5-5, gpt-6-luna, deepseek-v4.1-flash]

@@ -1,0 +1,23 @@
+{% macro job_panel(job, project_url) %}
+<section id="job" class="job" aria-labelledby="job-title" aria-live="polite"
+         data-job-url="{{ project_url }}/job"
+         data-job-status="{{ job.status if job else 'none' }}">
+  <div class="section-head">
+    <h2 id="job-title" class="section-title">ЗАДАЧА</h2>
+    {% if job %}
+    <span class="job-status status-{{ job.status }}" data-job-field="status_label">{{ job.status_label }}</span>
+    {% endif %}
+  </div>
+  {% if job %}
+  <div class="job-head">
+    <span class="job-label">{{ job.label }}</span>
+    <span class="mono muted small">начало {{ job.started_at|stamp }}{% if job.finished_at %} · конец {{ job.finished_at|stamp }}{% endif %}</span>
+  </div>
+  {% if job.message %}<p class="job-message{% if job.status == 'failed' %} is-error{% endif %}" data-job-field="message">{{ job.message }}</p>{% endif %}
+  <pre class="job-log" data-job-field="log">{% for line in job.log %}{{ line }}
+{% endfor %}</pre>
+  {% else %}
+  <p class="note">Задач в этом запуске консоли ещё не было. Этапы запускаются кнопками ниже; одновременно выполняется одна задача на проект.</p>
+  {% endif %}
+</section>
+{% endmacro %}
